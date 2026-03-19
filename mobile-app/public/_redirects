@@ -1,0 +1,5 @@
+# Netlify/Vercel redirects file
+# This ensures all routes fallback to index.html for React Router
+
+/*    /index.html   200
+

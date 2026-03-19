@@ -1,0 +1,32 @@
+# Environment
+frontend/.env
+mobile-app/.env
+
+# Dependencies
+frontend/node_modules/
+mobile-app/node_modules/
+
+# Build output
+frontend/dist/
+frontend/dist.zip
+frontend/debug.log
+mobile-app/dist/
+
+# Android build artifacts
+mobile-app/android/.gradle/
+mobile-app/android/build/
+mobile-app/android/app/build/
+mobile-app/android/capacitor-cordova-android-plugins/build/
+mobile-app/android/local.properties
+
+# Large binaries and secrets
+mobile-app/*.apk
+mobile-app/*.keystore
+frontend/*.apk
+frontend/*.zip
+frontend/public/*.apk
+frontend/public/downloads/*.apk
+
+# OS/editor
+.DS_Store
+Thumbs.db
