@@ -48,6 +48,9 @@ export default function AgroProductionDashboard() {
     inputItems: 0,
     suppliers: 0,
     outstandingSales: 0,
+    todaySalesCount: 0,
+    todaySalesAmount: 0,
+    todayExpensesAmount: 0,
   });
   const [recentTxns, setRecentTxns] = useState<Tx[]>([]);
 
@@ -66,6 +69,9 @@ export default function AgroProductionDashboard() {
           inputItems: Number(s.input_items || 0),
           suppliers: Number(s.suppliers || 0),
           outstandingSales: Number(s.outstanding_sales || 0),
+          todaySalesCount: Number(s.today_sales_count || 0),
+          todaySalesAmount: Number(s.today_sales_amount || 0),
+          todayExpensesAmount: Number(s.today_expenses_amount || 0),
         });
 
         /* recent transactions = sales + expenses merged & sorted */
@@ -146,7 +152,7 @@ export default function AgroProductionDashboard() {
           <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 text-white p-5 lg:p-6 shadow-lg">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 text-emerald-100 text-xs font-medium">
-                <DollarSign className="h-3.5 w-3.5" /> Harvest Revenue
+                <DollarSign className="h-3.5 w-3.5" /> Monthly Harvest Revenue
               </div>
               <button onClick={() => navigate("/agro/sales")} className="flex items-center gap-1 text-xs text-emerald-100 hover:text-white transition-colors">
                 Transaction History <ChevronRight className="h-3.5 w-3.5" />
@@ -160,7 +166,7 @@ export default function AgroProductionDashboard() {
                 {balanceHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <button onClick={() => navigate("/agro/produce")} className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
+            <button onClick={() => navigate("/agro/harvests")} className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
               <Calendar className="h-3.5 w-3.5" /> Upcoming Harvests
             </button>
             <button onClick={() => navigate("/agro/expenses")} className="mt-4 w-full flex items-center justify-between bg-emerald-700/60 hover:bg-emerald-700/80 rounded-xl px-4 py-2.5 transition-colors">
@@ -171,6 +177,19 @@ export default function AgroProductionDashboard() {
               </span>
               <ChevronRight className="h-4 w-4 text-emerald-200" />
             </button>
+            <p className="mt-2 text-[11px] text-emerald-100/90">Main amount is current-month revenue and costs. The mini cards below are for today only.</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button onClick={() => navigate("/agro/sales")} className="rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 px-4 py-3 text-left transition-colors">
+                <p className="text-[11px] uppercase tracking-wide text-emerald-100">Sales Today</p>
+                <p className="mt-1 text-2xl font-bold text-white">{loading ? "..." : summary.todaySalesCount}</p>
+                <p className="text-[11px] text-emerald-100">{loading ? "..." : fmt(summary.todaySalesAmount)}</p>
+              </button>
+              <button onClick={() => navigate("/agro/expenses")} className="rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 px-4 py-3 text-left transition-colors">
+                <p className="text-[11px] uppercase tracking-wide text-emerald-100">Expenses Today</p>
+                <p className="mt-1 text-lg font-bold text-white">{loading ? "..." : fmt(summary.todayExpensesAmount)}</p>
+                <p className="text-[11px] text-emerald-100">Farm-linked cost outflow</p>
+              </button>
+            </div>
           </div>
 
           {/* QUICK ACTIONS */}

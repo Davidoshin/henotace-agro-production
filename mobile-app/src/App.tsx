@@ -13,6 +13,7 @@ const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const CustomerLogin = lazy(() => import("./pages/CustomerLogin"));
 const BusinessLogin = lazy(() => import("./pages/BusinessLogin"));
 const AgroFarmsPage = lazy(() => import("./pages/agro/AgroFarmsPage"));
+const AgroHarvestPage = lazy(() => import("./pages/agro/AgroHarvestPage"));
 const AgroProducePage = lazy(() => import("./pages/agro/AgroProducePage"));
 const AgroInputsPage = lazy(() => import("./pages/agro/AgroInputsPage"));
 const AgroSuppliersPage = lazy(() => import("./pages/agro/AgroSuppliersPage"));
@@ -136,6 +137,7 @@ const App = () => (
             <Route path="/business-staff-dashboard" element={<DashboardLayout />} />
             <Route path="/agro-dashboard" element={<DashboardLayout />} />
             <Route path="/agro/farms" element={<AgroFarmsPage />} />
+            <Route path="/agro/harvests" element={<AgroHarvestPage />} />
             <Route path="/agro/produce" element={<AgroProducePage />} />
             <Route path="/agro/inputs" element={<AgroInputsPage />} />
             <Route path="/agro/suppliers" element={<AgroSuppliersPage />} />

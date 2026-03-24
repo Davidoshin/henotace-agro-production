@@ -92,6 +92,10 @@ interface AgroCrudPageProps {
   extraActions?: (item: any) => React.ReactNode;
   /** Optional header component rendered above the list */
   headerComponent?: React.ReactNode;
+  /** Optional extra actions rendered beside the add button */
+  headerActions?: React.ReactNode;
+  /** Called whenever items are loaded/refreshed */
+  onItemsLoaded?: (items: any[]) => void;
 }
 
 /* ═══════════ helpers ═══════════ */
@@ -248,6 +252,8 @@ export default function AgroCrudPage({
   onSuccess,
   extraActions,
   headerComponent,
+  headerActions,
+  onItemsLoaded,
 }: AgroCrudPageProps) {
   const { toast } = useToast();
   const initialData = useMemo(
@@ -272,7 +278,9 @@ export default function AgroCrudPage({
     setLoading(true);
     try {
       const data = await apiGet(endpoint);
-      setItems(Array.isArray(data?.[responseKey]) ? data[responseKey] : []);
+      const loadedItems = Array.isArray(data?.[responseKey]) ? data[responseKey] : [];
+      setItems(loadedItems);
+      onItemsLoaded?.(loadedItems);
     } catch (error: any) {
       toast({
         title: "Load failed",
@@ -282,7 +290,7 @@ export default function AgroCrudPage({
     } finally {
       setLoading(false);
     }
-  }, [endpoint, responseKey, title, toast]);
+  }, [endpoint, onItemsLoaded, responseKey, title, toast]);
 
   useEffect(() => {
     loadItems();
@@ -346,6 +354,7 @@ export default function AgroCrudPage({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
 
     let payload: Record<string, string> = {};
@@ -553,6 +562,7 @@ export default function AgroCrudPage({
           <Button variant="outline" size="sm" onClick={loadItems} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
+          {headerActions}
           <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditingItem(null); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={openCreate}>

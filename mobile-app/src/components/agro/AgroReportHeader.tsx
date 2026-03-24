@@ -9,7 +9,11 @@ import { Download, Loader2, Printer } from "lucide-react";
 const fmt = (v: number) =>
   `₦${(v || 0).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offset).toISOString().split("T")[0];
+};
 
 interface ReportCard {
   label: string;
@@ -51,6 +55,11 @@ export default function AgroReportHeader({
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [cards, setCards] = useState<ReportCard[]>([]);
+  const scopeLabel = showDateFilter
+    ? startDate === endDate
+      ? `Showing data for ${startDate}`
+      : `Showing data from ${startDate} to ${endDate}`
+    : "Showing all available records";
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -124,6 +133,7 @@ export default function AgroReportHeader({
         <div>
           <h2 className="text-xl font-bold text-foreground">{title}</h2>
           <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{scopeLabel}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={!report}>

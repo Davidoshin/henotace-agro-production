@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
+  CalendarDays,
   Sprout,
   Leaf,
   Warehouse,
@@ -25,6 +26,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/agro-dashboard", icon: LayoutDashboard },
   { label: "Farms", path: "/agro/farms", icon: Sprout },
+  { label: "Harvests", path: "/agro/harvests", icon: CalendarDays },
   { label: "Produce", path: "/agro/produce", icon: Leaf },
   { label: "Inputs", path: "/agro/inputs", icon: Warehouse },
   { label: "Suppliers", path: "/agro/suppliers", icon: Truck },
@@ -40,6 +42,7 @@ const NAV_ITEMS = [
 const BOTTOM_TABS = [
   { label: "Home", path: "/agro-dashboard", icon: LayoutDashboard },
   { label: "Farms", path: "/agro/farms", icon: Sprout },
+  { label: "Harvests", path: "/agro/harvests", icon: CalendarDays },
   { label: "Sales", path: "/agro/sales", icon: ShoppingCart },
   { label: "Expenses", path: "/agro/expenses", icon: DollarSign },
   { label: "More", path: "/agro/services", icon: Menu },

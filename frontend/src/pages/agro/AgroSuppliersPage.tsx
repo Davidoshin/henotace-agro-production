@@ -20,7 +20,7 @@ export default function AgroSuppliersPage() {
 
   const mapExportRows = useCallback((r: any) =>
     (r.items || []).map((s: any) => [
-      s.name, s.type || "", String(s.total_amount), String(s.amount_paid), String(s.amount_owed),
+      s.name, s.farm_name || "", s.type || "", String(s.total_amount), String(s.amount_paid), String(s.amount_owed),
     ]), []);
 
   return (
@@ -38,12 +38,13 @@ export default function AgroSuppliersPage() {
           endpoint="agro/report/suppliers/"
           mapCards={mapCards}
           mapExportRows={mapExportRows}
-          exportHeaders={["Supplier", "Type", "Total Amount", "Amount Paid", "Amount Owed"]}
+          exportHeaders={["Supplier", "Farm", "Type", "Total Amount", "Amount Paid", "Amount Owed"]}
           exportFilename="suppliers-report"
           showDateFilter={false}
         />
       }
       fields={[
+        { name: "farm_id", label: "Farm", type: "async-select", asyncEndpoint: "agro/farms/", asyncResponseKey: "farms", asyncLabelKey: "name", asyncValueKey: "id", required: true },
         { name: "name", label: "Supplier Name", placeholder: "e.g. Agro Dealers Ltd", required: true },
         { name: "supplier_type", label: "Supplier Type", type: "select", options: [
           { label: "Seed Supplier", value: "seed" },
@@ -63,6 +64,7 @@ export default function AgroSuppliersPage() {
         { name: "notes", label: "Notes", type: "textarea", placeholder: "Payment terms, specialties, delivery schedule..." },
       ]}
       displayFields={[
+        { key: "farm_name", label: "Farm" },
         { key: "supplier_type", label: "Type" },
         { key: "phone", label: "Phone" },
         { key: "total_amount", label: "Total (₦)", format: fmtMoney },
