@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { isLoggedIn, getUserRole, getDashboardRoute } from "@/lib/auth";
 const Home = lazy(() => import("./pages/Home"));
 const DashboardLayout = lazy(() => import("./components/dashboard/DashboardLayout"));
 const ManageAccount = lazy(() => import("./pages/ManageAccount"));
@@ -107,6 +108,27 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AuthChecker = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if user has a valid session (within 2 weeks)
+    if (isLoggedIn()) {
+      const role = getUserRole();
+      const dashboardRoute = getDashboardRoute(role || '');
+      
+      // Only redirect if currently on a login page or root
+      const loginRoutes = ['/', '/login', '/business-login', '/agro-login', '/admin-login', '/customer-login', '/security-login', '/signup'];
+      if (loginRoutes.includes(location.pathname)) {
+        navigate(dashboardRoute, { replace: true });
+      }
+    }
+  }, [navigate, location]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -119,6 +141,7 @@ const App = () => (
           v7_relativeSplatPath: true,
         }}
       >
+        <AuthChecker />
         <Suspense fallback={<LoadingSpinner message="Loading..." />}>
           <Routes>
             <Route path="/" element={<BusinessLogin />} />

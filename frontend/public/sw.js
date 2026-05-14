@@ -5,6 +5,8 @@ const OFFLINE_URL = '/offline.html';
 // Assets to cache on install
 const STATIC_ASSETS = [
   '/',
+  '/index.html',
+  '/offline.html',
   '/faviconlightmode.png',
   '/manifest.json'
 ];
@@ -45,7 +47,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - stale-while-revalidate for app shell and static assets
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
@@ -63,36 +65,33 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Only process valid responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return response;
+        })
+        .catch(() => {
+          return cachedResponse;
+        });
+
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetchPromise.then((response) => {
+        if (response) {
           return response;
         }
-        
-        // Clone the response before caching
-        const responseToCache = response.clone();
-        
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        
-        return response;
-      })
-      .catch(() => {
-        // Network failed, try cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If it's a navigation request, show offline page
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL).then(res => res || new Response('Offline'));
-          }
-          // Return empty response for failed requests
-          return new Response('', { status: 408, statusText: 'Request Timeout' });
-        });
-      })
+        if (event.request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL).then(res => res || new Response('Offline'));
+        }
+        return new Response('', { status: 408, statusText: 'Request Timeout' });
+      });
+    })
   );
 });
 

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDeleteOptimistic, apiGet, apiPostOptimistic, apiPutOptimistic } from "@/lib/api";
 import {
   CalendarDays,
   ChevronLeft,
@@ -213,15 +213,20 @@ export default function AgroHarvestPage() {
         actual_quantity: form.actual_quantity || null,
       };
 
+      let offlineQueued = false;
       if (editingId) {
-        await apiPut(`agro/harvest-schedules/${editingId}/`, payload);
+        const result = await apiPutOptimistic(`agro/harvest-schedules/${editingId}/`, payload);
+        offlineQueued = (result as any)?.offlineQueued === true;
       } else {
-        await apiPost("agro/harvest-schedules/", payload);
+        const result = await apiPostOptimistic("agro/harvest-schedules/", payload);
+        offlineQueued = (result as any)?.offlineQueued === true;
       }
 
       toast({
-        title: editingId ? "Harvest schedule updated" : "Harvest schedule added",
-        description: "The harvest calendar has been saved successfully.",
+        title: offlineQueued ? "Harvest schedule queued" : editingId ? "Harvest schedule updated" : "Harvest schedule added",
+        description: offlineQueued
+          ? "Your harvest schedule will sync when you are back online."
+          : "The harvest calendar has been saved successfully.",
       });
       setDialogOpen(false);
       resetForm();
@@ -242,9 +247,16 @@ export default function AgroHarvestPage() {
     if (!confirmed) return;
 
     try {
-      await apiDelete(`agro/harvest-schedules/${item.id}/`);
-      toast({ title: "Harvest schedule deleted" });
-      await loadData();
+      const result = await apiDeleteOptimistic(`agro/harvest-schedules/${item.id}/`);
+      const offlineQueued = (result as any)?.offlineQueued === true;
+      toast({
+        title: offlineQueued ? "Delete queued" : "Harvest schedule deleted",
+        description: offlineQueued ? "This deletion will sync when you are back online." : undefined,
+      });
+      setSchedules((prev) => prev.filter((schedule) => schedule.id !== item.id));
+      if (!offlineQueued) {
+        await loadData();
+      }
     } catch (error: any) {
       toast({
         title: "Could not delete schedule",

@@ -15,6 +15,7 @@ export default function AgroSalesPage() {
   const [receiptSaleId, setReceiptSaleId] = useState<number | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [refreshReport, setRefreshReport] = useState<(() => void) | null>(null);
 
   const mapCards = useCallback((r: any) => [
     { label: "Total Sales", value: String(r.total_sales || 0) },
@@ -48,6 +49,7 @@ export default function AgroSalesPage() {
             mapExportRows={mapExportRows}
             exportHeaders={["Buyer", "Produce", "Qty", "Unit", "Unit Price", "Total", "Paid", "Method", "Status", "Date"]}
             exportFilename="sales-report"
+            onRefreshReady={(refresh) => setRefreshReport(() => refresh)}
           />
         }
         onSuccess={(response, isEdit) => {
@@ -55,6 +57,10 @@ export default function AgroSalesPage() {
             setReceiptSaleId(response.sale.id);
             setShowSuccess(true);
             setReceiptOpen(true);
+          }
+          // Refresh report stats after successful save
+          if (refreshReport) {
+            refreshReport();
           }
         }}
         extraActions={(item) => (
@@ -95,6 +101,7 @@ export default function AgroSalesPage() {
           asyncLabelKey: "name",
           asyncValueKey: "id",
           autoPopulate: { unit: "measurement_unit", unit_price: "unit_price" },
+          required: true,
         },
         {
           name: "farm_id",
@@ -104,6 +111,7 @@ export default function AgroSalesPage() {
           asyncResponseKey: "farms",
           asyncLabelKey: "name",
           asyncValueKey: "id",
+          required: true,
         },
         { name: "quantity", label: "Quantity Sold", type: "number", placeholder: "30", required: true },
         { name: "unit", label: "Unit", type: "select", options: [

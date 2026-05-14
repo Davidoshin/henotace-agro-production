@@ -38,6 +38,8 @@ interface AgroReportHeaderProps {
   exportFilename: string;
   /** Whether to show date filters (default true) */
   showDateFilter?: boolean;
+  /** Callback to expose refresh function to parent */
+  onRefreshReady?: (refresh: () => void) => void;
 }
 
 export default function AgroReportHeader({
@@ -49,6 +51,7 @@ export default function AgroReportHeader({
   exportHeaders,
   exportFilename,
   showDateFilter = true,
+  onRefreshReady,
 }: AgroReportHeaderProps) {
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState(today());
@@ -80,6 +83,13 @@ export default function AgroReportHeader({
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
+
+  // Expose refresh function to parent
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(fetchReport);
+    }
+  }, [fetchReport, onRefreshReady]);
 
   /* ─── Export to CSV ─── */
   const handleExport = () => {

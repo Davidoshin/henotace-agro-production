@@ -15,6 +15,16 @@
 
 import { getEffectiveApiKey as getCbtEffectiveApiKey } from './cbtKey';
 import { reportApiError } from '@/services/errorReporting';
+import {
+  getCachedData,
+  setCachedData,
+  queueRequest,
+  getQueuedRequests,
+  removeQueuedRequest,
+  getIsOnline,
+  dispatchOfflineSyncStatus,
+  initOfflineStatusListeners,
+} from './offline';
 
 // Check if running in Electron
 const isElectron = (): boolean => {
@@ -130,10 +140,15 @@ const refreshAccessToken = async (): Promise<boolean> => {
       if (legacyResponse.ok) {
         const data = await legacyResponse.json();
         if (data.access) {
-          localStorage.setItem('accessToken', data.access);
-          if (data.refresh) {
-            localStorage.setItem('refreshToken', data.refresh);
-          }
+          // Store tokens and user data with timestamp for 2-week expiry
+          const loginTimestamp = Date.now();
+          localStorage.setItem('accessToken', data?.access || '');
+          localStorage.setItem('refreshToken', data?.refresh || '');
+          localStorage.setItem('loginTimestamp', String(loginTimestamp));
+          // Use actual role from backend if available, otherwise map the login role
+          const actualRole = data?.user?.role || (role === 'student' ? 'cbt_student' : 'cbt_institution');
+          localStorage.setItem('userRole', actualRole);
+          if (data?.user) localStorage.setItem('userData', JSON.stringify(data.user));
           return true;
         }
       }
@@ -391,6 +406,180 @@ export const apiPatch = <T = any>(endpoint: string, data?: any, options?: Reques
 
 export const apiDelete = <T = any>(endpoint: string, options?: RequestInit): Promise<T> =>
   apiCall<T>(endpoint, { ...options, method: 'DELETE' });
+
+export const apiGetCached = async <T = any>(
+  endpoint: string,
+  options?: RequestInit,
+  cacheTTL: number = 1000 * 60 * 60 * 24
+): Promise<T> => {
+  const cached = getCachedData<T>(endpoint);
+  if (cached !== null) {
+    // Refresh cache in background
+    (async () => {
+      if (!getIsOnline()) return;
+      try {
+        const fresh = await apiGet<T>(endpoint, options);
+        setCachedData(endpoint, fresh, cacheTTL);
+      } catch {
+        // Ignore background refresh failures
+      }
+    })();
+    return cached;
+  }
+
+  const data = await apiGet<T>(endpoint, options);
+  setCachedData(endpoint, data, cacheTTL);
+  return data;
+};
+
+const processOfflineQueue = async (): Promise<void> => {
+  if (!getIsOnline()) return;
+  dispatchOfflineSyncStatus('syncing');
+  const queue = getQueuedRequests();
+
+  for (const request of queue) {
+    try {
+      await apiCall(request.endpoint, {
+        ...request.options,
+        method: request.method,
+        body: request.options?.body || JSON.stringify(request.body),
+      });
+      removeQueuedRequest(request.id);
+    } catch (error: any) {
+      // If still offline or network error, stop processing until connectivity returns
+      if (!getIsOnline() || error?.isNetworkError) {
+        break;
+      }
+      // For other errors, drop the request after 3 retries
+      const retryLimit = 3;
+      const retries = request.retryCount + 1;
+      if (retries >= retryLimit) {
+        removeQueuedRequest(request.id);
+      } else {
+        queueRequest({ ...request, retryCount: retries, lastAttemptAt: Date.now() });
+      }
+    }
+  }
+
+  dispatchOfflineSyncStatus('idle');
+};
+
+const scheduleQueueProcessing = (): void => {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('online', () => {
+    dispatchOfflineSyncStatus('online');
+    processOfflineQueue();
+  });
+};
+
+export const initializeOfflineSync = (): void => {
+  initOfflineStatusListeners();
+  scheduleQueueProcessing();
+  if (getIsOnline()) {
+    processOfflineQueue().catch(() => {
+      // Ignore sync failures until the next online event
+    });
+  }
+};
+
+const queueOfflineRequest = async <T = any>(
+  endpoint: string,
+  data?: any,
+  options?: RequestInit,
+  method: OfflineQueueMethod = 'POST'
+): Promise<T | { offlineQueued: true; data: any }> => {
+  const body = data instanceof FormData ? data : data;
+  const requestId = `${endpoint}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+
+  const offlinePayload = {
+    id: requestId,
+    endpoint,
+    method,
+    body,
+    options,
+    createdAt: Date.now(),
+    retryCount: 0,
+  };
+
+  queueRequest(offlinePayload);
+  return { offlineQueued: true, data };
+};
+
+export const apiPostOptimistic = async <T = any>(
+  endpoint: string,
+  data?: any,
+  options?: RequestInit
+): Promise<T | { offlineQueued: true; data: any }> => {
+  if (!getIsOnline()) {
+    return queueOfflineRequest(endpoint, data, options, 'POST');
+  }
+
+  try {
+    return await apiPost<T>(endpoint, data, options);
+  } catch (error: any) {
+    if (!getIsOnline() || error?.isNetworkError) {
+      return queueOfflineRequest(endpoint, data, options, 'POST');
+    }
+    throw error;
+  }
+};
+
+export const apiPutOptimistic = async <T = any>(
+  endpoint: string,
+  data?: any,
+  options?: RequestInit
+): Promise<T | { offlineQueued: true; data: any }> => {
+  if (!getIsOnline()) {
+    return queueOfflineRequest(endpoint, data, options, 'PUT');
+  }
+
+  try {
+    return await apiPut<T>(endpoint, data, options);
+  } catch (error: any) {
+    if (!getIsOnline() || error?.isNetworkError) {
+      return queueOfflineRequest(endpoint, data, options, 'PUT');
+    }
+    throw error;
+  }
+};
+
+export const apiPatchOptimistic = async <T = any>(
+  endpoint: string,
+  data?: any,
+  options?: RequestInit
+): Promise<T | { offlineQueued: true; data: any }> => {
+  if (!getIsOnline()) {
+    return queueOfflineRequest(endpoint, data, options, 'PATCH');
+  }
+
+  try {
+    return await apiPatch<T>(endpoint, data, options);
+  } catch (error: any) {
+    if (!getIsOnline() || error?.isNetworkError) {
+      return queueOfflineRequest(endpoint, data, options, 'PATCH');
+    }
+    throw error;
+  }
+};
+
+export const apiDeleteOptimistic = async <T = any>(
+  endpoint: string,
+  data?: any,
+  options?: RequestInit
+): Promise<T | { offlineQueued: true; data: any }> => {
+  if (!getIsOnline()) {
+    return queueOfflineRequest(endpoint, data, options, 'DELETE');
+  }
+
+  try {
+    return await apiDelete<T>(endpoint, options);
+  } catch (error: any) {
+    if (!getIsOnline() || error?.isNetworkError) {
+      return queueOfflineRequest(endpoint, data, options, 'DELETE');
+    }
+    throw error;
+  }
+};
 
 /**
  * API call without authentication (for login, signup, etc.)

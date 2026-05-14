@@ -106,9 +106,11 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
       }) as any;
       
       if (data.success) {
-        // store tokens and proceed
+        // store tokens and proceed with timestamp for 2-week expiry
+        const loginTimestamp = Date.now();
         localStorage.setItem('accessToken', data.access);
         localStorage.setItem('refreshToken', data.refresh);
+        localStorage.setItem('loginTimestamp', String(loginTimestamp));
         // Use actual role from backend if available, otherwise map the login role
         const actualRole = data?.user?.role || (role === 'student' ? 'cbt_student' : 'cbt_institution');
         localStorage.setItem('userRole', actualRole);
@@ -156,9 +158,11 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
         setTwoFAOpen(true);
         return;
       }
-      // Store tokens and user data
+      // Store tokens and user data with timestamp for 2-week expiry
+      const loginTimestamp = Date.now();
       localStorage.setItem('accessToken', data?.access || '');
       localStorage.setItem('refreshToken', data?.refresh || '');
+      localStorage.setItem('loginTimestamp', String(loginTimestamp));
       // Use actual role from backend if available, otherwise map the login role
       const actualRole = data?.user?.role || (role === 'student' ? 'cbt_student' : 'cbt_institution');
       localStorage.setItem('userRole', actualRole);

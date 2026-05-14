@@ -2,9 +2,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initErrorReporting } from "./services/errorReporting";
+import { initializeOfflineSync } from "./lib/api";
 
 // Initialize error reporting for proactive customer support
 initErrorReporting();
+initializeOfflineSync();
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {

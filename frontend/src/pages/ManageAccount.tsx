@@ -17,7 +17,7 @@ import TwoFAManagement from "@/components/account/TwoFAManagement";
 import TelegramIntegration from "@/components/account/TelegramIntegration";
 import PaymentMethodDialog from "@/components/payment/PaymentMethodDialog";
 import { AICreditsUpgrade } from "@/components/shared/AICreditsUpgrade";
-import { apiGet, apiPost, getBaseUrl } from "@/lib/api";
+import { apiGet, apiGetCached, apiPost, apiPostOptimistic, getBaseUrl } from "@/lib/api";
 
 type View = "ai-credits" | "wallet" | "referrals" | "profile" | "twofa" | "community" | "institution" | "telegram" | "export" | "verification" | "security" | "upgrade" | "theme" | "support" | "delete-account";
 
@@ -126,12 +126,9 @@ export default function ManageAccount(){
         return null;
       }
       try {
-        // Add cache-busting timestamp to ensure fresh data in both prod and local
-        const timestamp = Date.now();
-        const endpoint = `profile/?_t=${timestamp}`;
-        const data = await apiGet(endpoint) as any;
+        const endpoint = 'profile/';
+        const data = await apiGetCached<any>(endpoint, {}, 1000 * 60) as any;
         setUser(data);
-        // Update localStorage to keep dashboard in sync
         if (data) {
           localStorage.setItem('userData', JSON.stringify(data));
         }
@@ -1640,29 +1637,9 @@ function WalletSection({ user, isBRM, brmStaff }: { user: any; isBRM?: boolean; 
   // Fetch wallet data
   const fetchWalletData = async () => {
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('brmToken');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
-      // Use BRM wallet endpoint for BRM staff, business wallet for business owners
       const walletEndpoint = isBRM ? 'brm/wallet/' : 'business/wallet/';
-      const response = await fetch(`${getBaseUrl()}${walletEndpoint}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setWalletData(data);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData?.error || 'Failed to load wallet data');
-      }
+      const data = await apiGetCached<any>(walletEndpoint, {}, 1000 * 60 * 5);
+      setWalletData(data);
     } catch (err: any) {
       setError(err.message || 'Failed to load wallet data');
     } finally {
@@ -1685,26 +1662,16 @@ function WalletSection({ user, isBRM, brmStaff }: { user: any; isBRM?: boolean; 
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${getBaseUrl()}business/wallet/deposit/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: amount,
-          callback_url: `${window.location.origin}/manage-account?view=wallet&payment=complete`
-        })
+      const data = await apiPost<any>('business/wallet/deposit/', {
+        amount: amount,
+        callback_url: `${window.location.origin}/manage-account?view=wallet&payment=complete`
       });
 
-      const data = await response.json();
-      
-      if (response.ok && data.payment_link) {
+      if (data.payment_link) {
         // Redirect to Flutterwave payment page
         window.location.href = data.payment_link;
       } else {
-        setError(data.error || 'Failed to initiate deposit');
+        setError((data as any).error || 'Failed to initiate deposit');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to initiate deposit');
@@ -1730,26 +1697,11 @@ function WalletSection({ user, isBRM, brmStaff }: { user: any; isBRM?: boolean; 
     setError(null);
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${getBaseUrl()}business/wallet/cashback/withdraw/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ amount })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setSuccess(`Successfully withdrew ₦${amount.toLocaleString()} cashback to wallet`);
-        setShowCashbackDialog(false);
-        setWithdrawAmount('');
-        fetchWalletData();
-      } else {
-        setError(data.error || 'Failed to withdraw cashback');
-      }
+      const data = await apiPost<any>('business/wallet/cashback/withdraw/', { amount });
+      setSuccess(`Successfully withdrew ₦${amount.toLocaleString()} cashback to wallet`);
+      setShowCashbackDialog(false);
+      setWithdrawAmount('');
+      fetchWalletData();
     } catch (err: any) {
       setError(err.message || 'Failed to withdraw cashback');
     } finally {
@@ -2010,13 +1962,16 @@ function WalletSection({ user, isBRM, brmStaff }: { user: any; isBRM?: boolean; 
                     className="bg-green-600 hover:bg-green-700"
                     onClick={async () => {
                       try {
-                        const response = await apiPost('business/wallet/pay-fees/', { fee_type: 'platform' });
-                        if (response.success) {
+                        const result = await apiPostOptimistic('business/wallet/pay-fees/', { fee_type: 'platform' });
+                        const response = (result as any).offlineQueued ? (result as any).data : result;
+                        if ((result as any).offlineQueued) {
+                          setSuccess('Fee payment has been queued and will complete when you are back online.');
+                        } else if (response.success) {
                           setSuccess(response.message);
-                          fetchWalletData();
                         } else {
                           setError(response.error || 'Failed to pay fees');
                         }
+                        fetchWalletData();
                       } catch (err: any) {
                         setError(err.error || 'Failed to pay fees');
                       }
@@ -2108,13 +2063,16 @@ function WalletSection({ user, isBRM, brmStaff }: { user: any; isBRM?: boolean; 
                     className="bg-green-600 hover:bg-green-700"
                     onClick={async () => {
                       try {
-                        const response = await apiPost('business/wallet/pay-fees/', { fee_type: 'delivery' });
-                        if (response.success) {
+                        const result = await apiPostOptimistic('business/wallet/pay-fees/', { fee_type: 'delivery' });
+                        const response = (result as any).offlineQueued ? (result as any).data : result;
+                        if ((result as any).offlineQueued) {
+                          setSuccess('Delivery fee payment has been queued and will complete when you are back online.');
+                        } else if (response.success) {
                           setSuccess(response.message);
-                          fetchWalletData();
                         } else {
                           setError(response.error || 'Failed to pay fees');
                         }
+                        fetchWalletData();
                       } catch (err: any) {
                         setError(err.error || 'Failed to pay fees');
                       }

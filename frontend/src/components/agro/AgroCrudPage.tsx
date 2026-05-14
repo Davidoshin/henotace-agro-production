@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+import { apiGet, apiGetCached, apiPostOptimistic, apiPutOptimistic, apiDeleteOptimistic } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -277,7 +277,7 @@ export default function AgroCrudPage({
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiGet(endpoint);
+      const data = await apiGetCached(endpoint, {}, 1000 * 60 * 5);
       const loadedItems = Array.isArray(data?.[responseKey]) ? data[responseKey] : [];
       setItems(loadedItems);
       onItemsLoaded?.(loadedItems);
@@ -357,10 +357,28 @@ export default function AgroCrudPage({
     if (saving) return;
     setSaving(true);
 
+    const visibleFields = fields.filter(isFieldVisible);
+    const missingField = visibleFields.find((f) => {
+      if (!f.required) return false;
+      const raw = String(formData[f.name] || "").trim();
+      if (raw === "") return true;
+      if (f.type === "number" && stripCommas(raw) === "") return true;
+      return false;
+    });
+
+    if (missingField) {
+      toast({
+        title: "Validation failed",
+        description: `${missingField.label} is required.`,
+        variant: "destructive",
+      });
+      setSaving(false);
+      return;
+    }
+
     let payload: Record<string, string> = {};
-    fields.forEach((f) => {
+    visibleFields.forEach((f) => {
       if (f.computed) return;
-      if (!isFieldVisible(f)) return;
       const val = formData[f.name] || "";
       if (f.type === "checkbox") {
         payload[f.name] = val === "true" ? "true" : "false";
@@ -378,37 +396,78 @@ export default function AgroCrudPage({
       if (f.excludeFromPayload) delete payload[f.name];
     });
 
+    // Optimistic UI: Close dialog immediately and update list
+    const optimisticId = editingItem ? editingItem.id : `optimistic-${Date.now()}`;
+    const optimisticItem = editingItem ? { ...editingItem, ...payload } : { id: optimisticId, ...payload };
+    
+    if (editingItem) {
+      setItems((prev) => prev.map((item) => (item.id === editingItem.id ? optimisticItem : item)));
+    } else {
+      setItems((prev) => [optimisticItem, ...prev]);
+    }
+    
+    setFormData(initialData);
+    setEditingItem(null);
+    setDialogOpen(false);
+    setSaving(false);
+
+    // Make API call in background
     try {
-      let response: any;
+      let result: any;
+      let offlineQueued = false;
       if (editingItem) {
-        response = await apiPut(`${endpoint}${editingItem.id}/`, payload);
-        toast({ title: "Updated", description: `${title} entry updated successfully.` });
+        result = await apiPutOptimistic(`${endpoint}${editingItem.id}/`, payload);
+        offlineQueued = result?.offlineQueued === true;
+        toast({
+          title: offlineQueued ? "Update queued" : "Updated",
+          description: offlineQueued
+            ? `${title} update will sync when you are back online.`
+            : `${title} entry updated successfully.`,
+        });
       } else {
-        response = await apiPost(endpoint, payload);
-        toast({ title: "Saved", description: `${title} entry created successfully.` });
+        result = await apiPostOptimistic(endpoint, payload);
+        offlineQueued = result?.offlineQueued === true;
+        toast({
+          title: offlineQueued ? "Saved offline" : "Saved",
+          description: offlineQueued
+            ? `${title} entry will be created when you are back online.`
+            : `${title} entry created successfully.`,
+        });
       }
+
+      const response = offlineQueued ? result.data : result;
       if (onSuccess) onSuccess(response, !!editingItem);
-      setFormData(initialData);
-      setEditingItem(null);
-      setDialogOpen(false);
-      loadItems();
+      
+      // Reload items to get the actual server data
+      if (!offlineQueued) {
+        loadItems();
+      }
     } catch (error: any) {
       toast({
         title: "Save failed",
         description: error?.message || `Could not save.`,
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
+      // Revert optimistic update on error
+      setItems((prev) => prev.filter((item) => item.id !== optimisticId));
     }
   };
 
   const handleDelete = async (id: number) => {
     setDeletingId(id);
     try {
-      await apiDelete(`${endpoint}${id}/`);
-      toast({ title: "Deleted", description: `Record removed.` });
-      loadItems();
+      const result = await apiDeleteOptimistic(`${endpoint}${id}/`);
+      const offlineQueued = (result as any)?.offlineQueued === true;
+      toast({
+        title: offlineQueued ? "Delete queued" : "Deleted",
+        description: offlineQueued
+          ? "This deletion will be applied when you are back online."
+          : "Record removed.",
+      });
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      if (!offlineQueued) {
+        loadItems();
+      }
     } catch (error: any) {
       toast({
         title: "Delete failed",

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import AgroCrudPage from "@/components/agro/AgroCrudPage";
-import { apiPost } from "@/lib/api";
+import { apiPostOptimistic } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -49,12 +49,18 @@ export default function AgroProducePage() {
 
     setRestocking(true);
     try {
-      await apiPost(`agro/produce/${restockData.produce_id}/restock/`, {
+      const result = await apiPostOptimistic(`agro/produce/${restockData.produce_id}/restock/`, {
         quantity_added: restockData.quantity_added,
         unit_price: restockData.unit_price,
         notes: restockData.notes,
       });
-      toast({ title: "Produce restocked", description: "Farm produce stock has been updated." });
+      const offlineQueued = (result as any)?.offlineQueued === true;
+      toast({
+        title: offlineQueued ? "Restock queued" : "Produce restocked",
+        description: offlineQueued
+          ? "Stock restock will sync when you are back online."
+          : "Farm produce stock has been updated.",
+      });
       setRestockData({ produce_id: "", quantity_added: "", unit_price: "", notes: "" });
       setRestockOpen(false);
       setRefreshKey((value) => value + 1);
