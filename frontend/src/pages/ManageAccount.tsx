@@ -2398,6 +2398,18 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
     billing_cycle: string;
     expires_at: string | null;
     wallet_balance: number;
+    pending_invoice: {
+      reference: string;
+      plan: string;
+      plan_name: string;
+      billing_cycle: string;
+      amount: number;
+      due_at: string | null;
+      period_starts_at: string | null;
+      period_ends_at: string | null;
+      created_at: string;
+      status: string;
+    } | null;
   } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'biyearly' | 'yearly'>('monthly');
@@ -2447,6 +2459,11 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
         if (response.ok) {
           const data = await response.json();
           setSubscriptionData(data);
+          if (data.pending_invoice?.billing_cycle) {
+            setBillingCycle(data.pending_invoice.billing_cycle);
+          } else if (data.billing_cycle) {
+            setBillingCycle(data.billing_cycle);
+          }
         } else {
           setError('Failed to load subscription plans');
         }
@@ -2493,10 +2510,11 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
         setSuccess(data.message);
         setSubscriptionData(prev => prev ? {
           ...prev,
-          current_plan: selectedPlan,
-          billing_cycle: billingCycle,
-          expires_at: data.subscription?.expires_at,
-          wallet_balance: data.wallet_balance
+          current_plan: data.subscription?.plan || prev.current_plan,
+          billing_cycle: data.subscription?.billing_cycle || prev.billing_cycle,
+          expires_at: data.subscription?.expires_at ?? prev.expires_at,
+          wallet_balance: data.wallet_balance ?? prev.wallet_balance,
+          pending_invoice: data.pending_invoice ?? null,
         } : null);
         setShowPaymentDialog(false);
       } else {
@@ -2530,6 +2548,32 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
     }
   };
 
+  const getSelectedPlanAmount = () => {
+    if (!selectedPlan || !subscriptionData) {
+      return 0;
+    }
+
+    if (
+      subscriptionData.pending_invoice &&
+      subscriptionData.pending_invoice.plan === selectedPlan &&
+      subscriptionData.pending_invoice.billing_cycle === billingCycle
+    ) {
+      return subscriptionData.pending_invoice.amount;
+    }
+
+    return getBillingAmount(subscriptionData.plans[selectedPlan]);
+  };
+
+  const openPendingInvoice = () => {
+    if (!subscriptionData?.pending_invoice) {
+      return;
+    }
+
+    setSelectedPlan(subscriptionData.pending_invoice.plan);
+    setBillingCycle(subscriptionData.pending_invoice.billing_cycle as 'monthly' | 'quarterly' | 'biyearly' | 'yearly');
+    setShowPaymentDialog(true);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -2557,9 +2601,9 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
       </div>
 
       {/* Current Status */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
                 <Crown className="w-6 h-6 text-primary" />
@@ -2574,6 +2618,11 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <Wallet className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -2585,9 +2634,83 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                 </p>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className={subscriptionData?.pending_invoice ? 'border-amber-300 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/30' : ''}>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <FileDown className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Unpaid Invoice</p>
+                {subscriptionData?.pending_invoice ? (
+                  <>
+                    <p className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                      ₦{subscriptionData.pending_invoice.amount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {subscriptionData.pending_invoice.plan_name} · {subscriptionData.pending_invoice.billing_cycle}
+                    </p>
+                    {subscriptionData.pending_invoice.due_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Due: {new Date(subscriptionData.pending_invoice.due_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-bold">No invoice</p>
+                    <p className="text-xs text-muted-foreground">
+                      Create an unpaid renewal or upgrade invoice ahead of expiry.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+            {subscriptionData?.pending_invoice && (
+              <Button variant="outline" className="mt-4 w-full" onClick={openPendingInvoice}>
+                Review Invoice
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {subscriptionData?.pending_invoice && (
+        <Card className="border-amber-300/70 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-950/20">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Upcoming Renewal Invoice</h3>
+                <p className="text-sm text-muted-foreground">
+                  This invoice was generated ahead of renewal so the subscription can be paid before the current plan expires.
+                </p>
+              </div>
+              <Button variant="outline" onClick={openPendingInvoice}>Pay or Update Invoice</Button>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Reference</p>
+                <p className="font-medium">{subscriptionData.pending_invoice.reference}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
+                <p className="font-medium">{subscriptionData.pending_invoice.due_at ? new Date(subscriptionData.pending_invoice.due_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Coverage Starts</p>
+                <p className="font-medium">{subscriptionData.pending_invoice.period_starts_at ? new Date(subscriptionData.pending_invoice.period_starts_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Coverage Ends</p>
+                <p className="font-medium">{subscriptionData.pending_invoice.period_ends_at ? new Date(subscriptionData.pending_invoice.period_ends_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Billing Cycle Toggle */}
       <Card>
@@ -2667,10 +2790,12 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
           const thisPlanLevel = planOrder[key] || 0;
           const isCurrentPlan = subscriptionData.current_plan === key;
           const isLowerPlan = thisPlanLevel < currentPlanLevel;
-          const isDisabled = isCurrentPlan || isLowerPlan;
+          const hasPendingInvoice = subscriptionData.pending_invoice?.plan === key && subscriptionData.pending_invoice?.billing_cycle === billingCycle;
+          const isDisabled = isLowerPlan;
           
           const getButtonText = () => {
-            if (isCurrentPlan) return 'Current Plan';
+            if (hasPendingInvoice) return 'Invoice Pending';
+            if (isCurrentPlan) return 'Renew Ahead';
             if (isLowerPlan) return 'Lower Plan';
             return 'Upgrade Now';
           };
@@ -2692,6 +2817,11 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
             {billingCycle === 'yearly' && !isCurrentPlan && plan.yearly_savings > 0 && (
               <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-3 py-1 rounded-br-lg">
                 Save ₦{plan.yearly_savings.toLocaleString()}
+              </div>
+            )}
+            {isCurrentPlan && (
+              <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-bl-lg">
+                Active
               </div>
             )}
             <CardHeader className="text-center pb-2">
@@ -2752,7 +2882,7 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
               Upgrade to {selectedPlan && subscriptionData?.plans[selectedPlan]?.name}
             </DialogTitle>
             <DialogDescription>
-              Choose how you'd like to pay for your subscription
+              Pay now from wallet or create an unpaid invoice to settle before expiry.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -2798,8 +2928,7 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                 </div>
               </Button>
               
-              {/* TODO: Add external payment option later */}
-              {/* <Button 
+              <Button 
                 className="w-full justify-start gap-3 h-auto py-4" 
                 variant="outline"
                 onClick={() => confirmUpgrade('external')}
@@ -2809,10 +2938,10 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                   <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="text-left">
-                  <div className="font-medium">Pay with Card/Bank</div>
-                  <p className="text-sm text-muted-foreground">Pay via Flutterwave</p>
+                  <div className="font-medium">Create Unpaid Invoice</div>
+                  <p className="text-sm text-muted-foreground">Save this renewal and pay it before it is due</p>
                 </div>
-              </Button> */}
+              </Button>
             </div>
             
             {upgrading && (

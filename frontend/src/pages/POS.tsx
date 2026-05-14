@@ -1749,7 +1749,7 @@ ${'='.repeat(40)}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Products Section */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
@@ -1766,7 +1766,7 @@ ${'='.repeat(40)}
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {isLoading ? (
                     <div className="col-span-full text-center py-8">
                       <PageSpinner />
@@ -1822,7 +1822,7 @@ ${'='.repeat(40)}
           </div>
 
           {/* Cart Section */}
-          <div className="space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">

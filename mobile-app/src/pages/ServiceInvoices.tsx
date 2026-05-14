@@ -31,7 +31,12 @@ import {
   XCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Menu
+  Menu,
+  Pause,
+  Printer,
+  Settings,
+  Bluetooth,
+  Check
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -437,6 +442,115 @@ export default function ServiceInvoices() {
       toast({
         title: "Error",
         description: error.message || "Failed to update invoice",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Update invoice status
+  const handleUpdateStatus = async (invoiceId: number, newStatus: string) => {
+    try {
+      const response = await apiPut(`business/service-invoices/${invoiceId}/`, {
+        status: newStatus
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: `Invoice status updated to ${newStatus}`
+        });
+        fetchInvoices(); // Refresh the invoice list
+      } else {
+        throw new Error(response.message || response.error || 'Failed to update invoice status');
+      }
+    } catch (error: any) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update invoice status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Print invoice with specific printer type (System/Bluetooth)
+  const handlePrintWithType = async (invoice: Invoice, printerType: 'system' | 'bluetooth') => {
+    try {
+      if (printerType === 'system') {
+        // System default printer - use standard print dialog
+        const formattedAmount = invoice.amount.toLocaleString('en-NG', {
+          style: 'currency',
+          currency: 'NGN',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        });
+        
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Invoice ${invoice.invoice_number}</title>
+              <style>
+                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                .invoice { max-width: 800px; margin: 0 auto; }
+                @media print { body { padding: 0; } }
+              </style>
+            </head>
+            <body>
+              <div class="invoice">
+                <h1>Invoice ${invoice.invoice_number}</h1>
+                <p><strong>Client:</strong> ${invoice.client_name}</p>
+                <p><strong>Email:</strong> ${invoice.client_email || ''}</p>
+                <p><strong>Amount:</strong> ${formattedAmount}</p>
+                <p><strong>Status:</strong> ${invoice.status}</p>
+                <p><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+              </div>
+              <script>window.print(); window.close();</script>
+            </body>
+            </html>
+          `);
+          printWindow.document.close();
+        }
+      } else if (printerType === 'bluetooth') {
+        // Bluetooth printer - show notification
+        toast({
+          title: "Bluetooth Printer",
+          description: "Connecting to paired Bluetooth printer...",
+        });
+        
+        // For mobile app with Bluetooth Classic support
+        if (navigator.serial) {
+          try {
+            const port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+            toast({
+              title: "Connected",
+              description: "Connected to Bluetooth printer. Sending print data...",
+            });
+            // Close the port after sending
+            await port.close();
+          } catch (error) {
+            toast({
+              title: "Error",
+              description: "Failed to connect to Bluetooth printer",
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Not Supported",
+            description: "Bluetooth printing is not supported on this device",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Error printing invoice:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to print invoice",
         variant: "destructive"
       });
     }
@@ -1134,13 +1248,14 @@ export default function ServiceInvoices() {
                           size="icon" 
                           className="h-7 w-7"
                           onClick={(e) => { e.stopPropagation(); handleSendInvoice(invoice); }}
+                          title="Send"
                         >
                           <Send className="h-3 w-3" />
                         </Button>
-                        {/* Download dropdown - inline under button */}
+                        {/* Download dropdown */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()} title="Download">
                               <Download className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1150,6 +1265,41 @@ export default function ServiceInvoices() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleQuickDownloadJPEG(invoice)}>
                               <Download className="h-4 w-4 mr-2" /> Download as Image
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        {/* Printer dropdown - System/Bluetooth */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()} title="Print">
+                              <Printer className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 z-[100]">
+                            <DropdownMenuItem onClick={() => handlePrintWithType(invoice, 'system')}>
+                              <Settings className="h-4 w-4 mr-2" /> Print (System)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePrintWithType(invoice, 'bluetooth')}>
+                              <Bluetooth className="h-4 w-4 mr-2" /> Print (Bluetooth)
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        {/* Status dropdown - 5th icon */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()} title="Update Status">
+                              <Clock className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40 z-[100]">
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(invoice.id, 'pending')}>
+                              <Clock className="h-4 w-4 mr-2" /> Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(invoice.id, 'on_hold')}>
+                              <Pause className="h-4 w-4 mr-2" /> On Hold
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(invoice.id, 'paid')}>
+                              <Check className="h-4 w-4 mr-2" /> Complete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

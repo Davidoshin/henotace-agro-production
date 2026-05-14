@@ -121,7 +121,7 @@ const App = () => (
       >
         <Suspense fallback={<LoadingSpinner message="Loading..." />}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<BusinessLogin />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/auth/session-action" element={<SessionAction />} />
             <Route path="/admin-login" element={<AdminLogin />} />

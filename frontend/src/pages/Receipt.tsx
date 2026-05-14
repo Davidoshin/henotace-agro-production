@@ -92,94 +92,117 @@ export default function ReceiptPage() {
         </div>
 
         {/* Receipt Card - styled like thermal receipt */}
-        <div className="bg-white rounded-lg shadow-lg p-6 print:shadow-none font-mono text-sm">
-          {/* Header */}
-          <div className="text-center border-b border-dashed border-gray-400 pb-4 mb-4">
-            <p className="text-xs text-gray-500">
-              {saleDate.toLocaleDateString()} {saleDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </p>
-            <h2 className="text-lg font-bold mt-1">Sales Receipt #{receiptId}</h2>
-            <p className="text-xs text-gray-500">Branch: {sale.branch?.name || 'Main'}</p>
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '3px solid #000000',
+          borderRadius: '0px',
+          padding: '16px',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '12px',
+          maxWidth: '80mm',
+          margin: '0 auto'
+        }} className="print:shadow-none">
+          {/* Date/Time */}
+          <div style={{ textAlign: 'center', marginBottom: '8px', fontSize: '11px', fontWeight: 700 }}>
+            {saleDate.toLocaleDateString()} {saleDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+
+          {/* Receipt Title */}
+          <div style={{ textAlign: 'center', marginBottom: '4px', fontSize: '12px', fontWeight: 700 }}>
+            Sales Receipt #{receiptId}
+          </div>
+
+          {/* Business Name */}
+          <div style={{ textAlign: 'center', marginBottom: '12px', borderBottom: '2px dashed #000000', paddingBottom: '8px' }}>
+            <h1 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 700, textTransform: 'uppercase' }}>{businessName}</h1>
             {sale.branch?.address && (
-              <p className="text-xs text-gray-500">{sale.branch.address}</p>
+              <p style={{ margin: '0 0 3px 0', fontSize: '10px', fontWeight: 600 }}>{sale.branch.address}</p>
             )}
             {sale.branch?.phone && (
-              <p className="text-xs text-gray-500">Tel: {sale.branch.phone}</p>
+              <p style={{ margin: '0 0 3px 0', fontSize: '10px', fontWeight: 600 }}>Tel: {sale.branch.phone}</p>
             )}
-          </div>
-
-          {/* Business Info */}
-          <div className="text-center mb-4">
-            <h1 className="text-xl font-bold uppercase">{businessName}</h1>
-            <p className="text-sm">Cashier: {staffName}</p>
+            <p style={{ margin: '0 0 3px 0', fontSize: '10px', fontWeight: 600 }}>Cashier: {staffName}</p>
             {sale.customer && (
-              <p className="text-sm">Customer: {sale.customer.name}</p>
+              <p style={{ margin: '0', fontSize: '10px', fontWeight: 600 }}>Customer: {sale.customer.name}</p>
             )}
           </div>
 
-          {/* Items Table */}
-          <div className="border-t border-b border-dashed border-gray-400 py-3 mb-3">
-            <div className="grid grid-cols-12 gap-1 text-xs font-bold mb-2">
-              <div className="col-span-5">Item</div>
-              <div className="col-span-2 text-center">Qty</div>
-              <div className="col-span-2 text-right">Price</div>
-              <div className="col-span-3 text-right">Ext</div>
+          {/* Items Header and Table */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px', borderBottom: '2px solid #000000', paddingBottom: '6px' }}>
+              <div style={{ textAlign: 'left', fontSize: '11px', fontWeight: 700 }}>Item</div>
+              <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: 700 }}>Qty</div>
+              <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>Price</div>
+              <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>Ext</div>
             </div>
-            <div className="border-t border-gray-300 mb-2"></div>
+
             {sale.items?.map((item: any, idx: number) => (
-              <div key={item.id || idx} className="mb-2">
-                <p className="text-xs truncate">{item.product?.name || item.name}</p>
-                <div className="grid grid-cols-12 gap-1 text-xs text-gray-600">
-                  <div className="col-span-5">{item.product?.sku || (idx + 1).toString().padStart(3, '0')}</div>
-                  <div className="col-span-2 text-center">{item.quantity}</div>
-                  <div className="col-span-2 text-right">₦{parseFloat(item.unit_price || 0).toFixed(0)}</div>
-                  <div className="col-span-3 text-right">₦{parseFloat(item.total_price || 0).toFixed(2)}</div>
+              <div key={item.id || idx} style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #e0e0e0' }}>
+                <p style={{ margin: '0 0 4px 0', fontSize: '10px', fontWeight: 600 }}>{item.product?.name || item.name}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', fontSize: '10px', fontWeight: 600 }}>
+                  <div style={{ textAlign: 'left' }}>{item.product?.sku || (idx + 1).toString().padStart(3, '0')}</div>
+                  <div style={{ textAlign: 'center' }}>{item.quantity}</div>
+                  <div style={{ textAlign: 'right' }}>₦{parseFloat(item.unit_price || 0).toFixed(0)}</div>
+                  <div style={{ textAlign: 'right' }}>₦{parseFloat(item.total_price || 0).toFixed(2)}</div>
                 </div>
               </div>
             ))}
           </div>
 
+          {/* Divider */}
+          <div style={{ borderBottom: '2px dashed #000000', marginBottom: '12px' }}></div>
+
           {/* Totals */}
-          <div className="text-right space-y-1 mb-4">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
+              <span>Subtotal</span>
               <span>₦{parseFloat(sale.total_amount || 0).toFixed(2)}</span>
             </div>
             {parseFloat(sale.discount_amount || 0) > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Discount:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px', color: '#059669' }}>
+                <span>Discount</span>
                 <span>-₦{parseFloat(sale.discount_amount).toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
-              <span>Local Sales Tax:</span>
-              <span>₦{parseFloat(sale.tax_amount || 0).toFixed(2)}</span>
-            </div>
-            <div className="border-t-2 border-black pt-2 mt-2">
-              <div className="flex justify-between text-lg font-bold">
-                <span>TOTAL:</span>
-                <span>₦{parseFloat(sale.final_amount || sale.total_amount || 0).toFixed(2)}</span>
+            {parseFloat(sale.tax_amount || 0) > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
+                <span>VAT (7.5%)</span>
+                <span>₦{parseFloat(sale.tax_amount || 0).toFixed(2)}</span>
               </div>
+            )}
+            <div style={{ borderTop: '2px solid #000000', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700 }}>
+              <span>TOTAL</span>
+              <span>₦{parseFloat(sale.final_amount || sale.total_amount || 0).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Payment:</span>
-              <span className="uppercase">{sale.payment_method}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginTop: '4px' }}>
+              <span>Payment</span>
+              <span style={{ textTransform: 'uppercase' }}>{sale.payment_method}</span>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-dashed border-gray-400 pt-4 text-center">
-            <p className="font-bold mb-3">Thanks for shopping with us!</p>
-            {storeUrl && (
-              <div className="flex items-center justify-center gap-3">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(storeUrl)}`} 
-                  alt="Store QR Code"
-                  className="w-20 h-20"
-                />
-                <p className="text-xs font-bold">Shop with us<br/>online!</p>
-              </div>
-            )}
+          {/* Divider */}
+          <div style={{ borderBottom: '2px dashed #000000', marginBottom: '12px' }}></div>
+
+          {/* Thank You Message */}
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <p style={{ margin: '0', fontSize: '12px', fontWeight: 700 }}>Thanks for doing business with us!</p>
+          </div>
+
+          {/* QR Code and Footer */}
+          {storeUrl && (
+            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(storeUrl)}`} 
+                alt="Store QR Code"
+                style={{ maxWidth: '80px', height: '80px', marginBottom: '8px' }}
+              />
+              <p style={{ margin: '0', fontSize: '10px', fontWeight: 700 }}>Shop with us online!</p>
+            </div>
+          )}
+
+          {/* Final Divider */}
+          <div style={{ borderTop: '2px solid #000000', paddingTop: '8px', textAlign: 'center' }}>
+            <p style={{ margin: '0', fontSize: '9px', fontWeight: 700 }}>powered by henotace business</p>
           </div>
         </div>
       </div>
