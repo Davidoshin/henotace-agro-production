@@ -128,7 +128,7 @@ const BusinessLogin = () => {
   const isAgroBusiness = (businessData: any, realm?: string) => {
     const category = String(businessData?.business_category || businessData?.category || '').toLowerCase();
     const businessType = String(businessData?.business_type || businessData?.type || '').toLowerCase();
-    return realm === 'agro' || category === 'agro_production' || ['agro_production', 'agro', 'agriculture', 'farm'].includes(businessType);
+    return realm === 'agro' || category === 'agro_production' || ['agro_production', 'agro', 'agriculture', 'farm', 'farming'].includes(businessType);
   };
 
   const persistBusinessCategory = (businessData: any, realm?: string) => {
@@ -278,14 +278,10 @@ const BusinessLogin = () => {
       localStorage.setItem('business_slug', data.business.slug || data.business.code?.toLowerCase() || '');
     }
     const agroAccount = isAgroRoute || isAgroBusiness(data.business, data.realm);
-    persistBusinessCategory(data.business, data.realm);
-    
-    toast({
-      title: 'Login successful',
-      description: `Welcome back${userData.first_name ? ', ' + userData.first_name : ''}!`,
-    });
-    
-    // Save credentials for future logins (auto-fill feature)
+        if (agroAccount) {
+          localStorage.setItem('business_category', data.business?.business_category || data.business?.category || 'agro_production');
+          localStorage.setItem('business_type', data.business?.business_type || data.business?.type || 'agro_production');
+        }
     saveCachedCredentials(userData.email, password);
     
     // Navigate based on role

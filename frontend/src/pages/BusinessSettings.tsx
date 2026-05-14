@@ -111,6 +111,7 @@ export default function BusinessSettings() {
   const initialTab = searchParams.get('tab') || 'business-type';
   const initialSection = searchParams.get('section');
   const [activeTab, setActiveTab] = useState(initialTab);
+  const AGRO_BUSINESS_TYPES = ['agro_production', 'agro', 'agriculture', 'farm', 'farming'];
   
   // Business Type Settings (like traditional/online school toggle)
   const [businessTypeSettings, setBusinessTypeSettings] = useState({
@@ -118,6 +119,7 @@ export default function BusinessSettings() {
     product_based_enabled: true,
     service_based_enabled: false,
   });
+  const isAgroBusinessCategory = businessTypeSettings.business_category === 'agro_production';
   
   const [businessInfo, setBusinessInfo] = useState({
     name: "",
@@ -457,7 +459,11 @@ export default function BusinessSettings() {
         });
         // Business Type Settings
         setBusinessTypeSettings({
-          business_category: data.business.business_category || "product_based",
+          business_category:
+            data.business.business_category ||
+            (AGRO_BUSINESS_TYPES.includes(String(data.business.business_type || data.business.type || '').toLowerCase())
+              ? 'agro_production'
+              : 'product_based'),
           product_based_enabled: data.business.product_based_enabled ?? true,
           service_based_enabled: data.business.service_based_enabled ?? false,
         });
@@ -524,6 +530,12 @@ export default function BusinessSettings() {
     }
   }, [initialSection]);
 
+  useEffect(() => {
+    if (isAgroBusinessCategory && activeTab === 'business-type') {
+      setActiveTab('business');
+    }
+  }, [activeTab, isAgroBusinessCategory]);
+
   const handleSave = async () => {
     try {
       setIsLoading(true);
@@ -559,7 +571,7 @@ export default function BusinessSettings() {
         // Reload settings to confirm save
         await loadBusinessSettings();
         if ((response.business?.business_category || businessTypeSettings.business_category) === 'agro_production') {
-          navigate('/business-admin-dashboard', { replace: true });
+          navigate('/agro-dashboard', { replace: true });
         }
       } else {
         toast({
@@ -595,10 +607,12 @@ export default function BusinessSettings() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="flex flex-wrap gap-2 h-auto p-2 border rounded-lg bg-muted/50 mb-4">
-            <TabsTrigger value="business-type" className="text-xs sm:text-sm">
-              <Briefcase className="w-4 h-4 mr-1 sm:mr-2" />
-              Business Type
-            </TabsTrigger>
+              {!isAgroBusinessCategory && (
+              <TabsTrigger value="business-type" className="text-xs sm:text-sm">
+                <Briefcase className="w-4 h-4 mr-1 sm:mr-2" />
+                Business Type
+              </TabsTrigger>
+            )}
             <TabsTrigger value="business" className="text-xs sm:text-sm">
               <Building2 className="w-4 h-4 mr-1 sm:mr-2" />
               Business Info
@@ -627,17 +641,38 @@ export default function BusinessSettings() {
 
           {/* Business Type Tab - Toggle between Product-based and Service-based */}
           <TabsContent value="business-type">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Briefcase className="w-5 h-5" />
-                  Business Type Configuration
-                </CardTitle>
-                <CardDescription>
-                  Select your business type. You can only choose one type at a time, but you can switch between them anytime.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            {isAgroBusinessCategory ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="w-5 h-5" />
+                    Business Type Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Agro production accounts cannot change business type here. This setting is locked to prevent accidentally switching out of Agro mode.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
+                    <p className="font-medium mb-2">Your account is configured for Agro Production.</p>
+                    <p className="text-sm text-emerald-700">
+                      Business type selection is disabled for Agro dashboard users to avoid tampering with the farm workflow.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="w-5 h-5" />
+                    Business Type Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Select your business type. You can only choose one type at a time, but you can switch between them anytime.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
                 {/* Product-Based Business Option */}
                 <div 
                   className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
@@ -1363,7 +1398,7 @@ export default function BusinessSettings() {
                               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                                 <p className="text-sm flex items-center gap-2">
                                   <Check className="w-4 h-4 text-green-600" />
-                                  Your tracking URL: <code className="bg-background px-2 py-0.5 rounded">/track/{'{tracking-code}'}</code>
+                                  Your tracking URL: <code className="bg-background px-2 py-0.5 rounded">{'/track/{tracking-code}'}</code>
                                 </p>
                               </div>
                             )}
@@ -1413,6 +1448,7 @@ export default function BusinessSettings() {
                 )}
               </CardContent>
             </Card>
+          )}
           </TabsContent>
 
           <TabsContent value="business">

@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, ArrowLeft, Sprout } from 'lucide-react';
 import { ButtonSpinner } from '@/components/ui/LoadingSpinner';
-import { apiCallPublic } from '@/lib/api';
+import { apiCallPublic, getBaseUrl } from '@/lib/api';
 
 
 const BusinessSignup = () => {
@@ -23,11 +23,18 @@ const BusinessSignup = () => {
   const [businessName, setBusinessName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [businessType] = useState('agro_production');
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
+
+  const isAgroBusiness = (businessData: any, realm?: string) => {
+    const category = String(businessData?.business_category || businessData?.category || '').toLowerCase();
+    const businessType = String(businessData?.business_type || businessData?.type || '').toLowerCase();
+    return realm === 'agro' || category === 'agro_production' || ['agro_production', 'agro', 'agriculture', 'farm', 'farming'].includes(businessType);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +42,7 @@ const BusinessSignup = () => {
     setError('');
 
     // Validation
-    if (!email || !password || !businessName || !firstName || !lastName) {
+    if (!email || !password || !businessName || !firstName || !lastName || !phoneNumber) {
       setError('All fields are required');
       setIsLoading(false);
       return;
@@ -60,6 +67,7 @@ const BusinessSignup = () => {
         password,
         first_name: firstName,
         last_name: lastName,
+        phone: phoneNumber.trim(),
         business_name: businessName.trim(),
         role: 'business_owner',
         business_type: businessType,
@@ -73,6 +81,7 @@ const BusinessSignup = () => {
           role: signupData.role,
           first_name: signupData.first_name,
           last_name: signupData.last_name,
+          phone: signupData.phone,
           business_name: signupData.business_name,
           referral_code: referralCode,
           business_type: businessType,
@@ -81,13 +90,14 @@ const BusinessSignup = () => {
 
       if (userData.success) {
         // Set password
-        await apiCallPublic('auth/signup/set-password/', {
+        const setPasswordData = await apiCallPublic('auth/signup/set-password/', {
           method: 'POST',
           body: JSON.stringify({
             email: signupData.email,
             password: signupData.password,
             first_name: signupData.first_name,
             last_name: signupData.last_name,
+            phone: signupData.phone,
             role: signupData.role,
             business_name: signupData.business_name,
             referral_code: referralCode,
@@ -95,13 +105,80 @@ const BusinessSignup = () => {
           }),
         });
 
-        toast({
-          title: 'Account Created',
-          description: 'Your account has been created successfully. You can now log in.',
+        // Auto-login after successful signup
+        const loginEndpoint = `${getBaseUrl()}auth/${isAgro ? 'agro' : 'business'}/login/`;
+        const loginResponse = await fetch(loginEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            email: signupData.email, 
+            password: signupData.password,
+            realm: isAgro ? 'agro' : 'business'
+          })
         });
 
-        // Navigate to login
-        navigate(isAgro ? '/agro-login' : '/login?type=business');
+        const loginData = await loginResponse.json();
+
+        if (!loginResponse.ok) {
+          throw new Error(loginData.error || loginData.detail || 'Auto-login failed');
+        }
+
+        // Store tokens and user data (same logic as BusinessLogin)
+        const accessToken = loginData.tokens?.access || loginData.access;
+        const refreshToken = loginData.tokens?.refresh || loginData.refresh;
+        
+        if (accessToken) {
+          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('refreshToken', refreshToken || '');
+          localStorage.setItem('access_token', accessToken);
+          localStorage.setItem('refresh_token', refreshToken || '');
+        }
+        
+        const role = loginData.user?.role || loginData.login_as || loginData.role || 'business_owner';
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('user_role', role);
+        
+        const userData = {
+          id: loginData.user?.id || loginData.user_id,
+          email: loginData.user?.email || signupData.email,
+          first_name: loginData.user?.first_name || signupData.first_name,
+          last_name: loginData.user?.last_name || signupData.last_name,
+          role: role,
+          profile_image: loginData.user?.profile_image || ''
+        };
+        
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('user_id', userData.id?.toString() || '');
+        localStorage.setItem('user_email', userData.email);
+        localStorage.setItem('user_first_name', userData.first_name);
+        localStorage.setItem('user_last_name', userData.last_name);
+        
+        // Store business data if available
+        if (loginData.business) {
+          localStorage.setItem('business_id', loginData.business.id?.toString() || '');
+          localStorage.setItem('business_name', loginData.business.name || '');
+          localStorage.setItem('business_unique_code', loginData.business.code || loginData.business.unique_code || '');
+          localStorage.setItem('business_slug', loginData.business.slug || loginData.business.code?.toLowerCase() || '');
+        }
+        
+        const agroAccount = isAgro || isAgroBusiness(loginData.business, loginData.realm);
+        if (agroAccount) {
+          localStorage.setItem('business_category', loginData.business?.business_category || loginData.business?.category || 'agro_production');
+          localStorage.setItem('business_type', loginData.business?.business_type || loginData.business?.type || 'agro_production');
+        }
+
+        toast({
+          title: 'Account Created',
+          description: 'Your account has been created successfully!',
+        });
+
+        // Navigate to dashboard
+        if (isAgro) {
+          navigate('/agro-dashboard');
+        } else {
+          navigate('/business-admin-dashboard');
+        }
       }
     } catch (e: any) {
       const errorMessage = e?.data?.error || e?.message || 'Signup failed. Please try again.';
@@ -195,6 +272,19 @@ const BusinessSignup = () => {
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="e.g. +234 123 456 7890"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
                   required
                   disabled={isLoading}
                 />

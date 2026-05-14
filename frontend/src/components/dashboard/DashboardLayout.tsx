@@ -118,8 +118,15 @@ export const DashboardLayout = () => {
   } | null>(null);
   const { toast } = useToast();
   const currentPath = location.pathname;
-  const businessCategory = (localStorage.getItem('business_category') || localStorage.getItem('business_type') || '').toLowerCase();
-  const isAgroProduction = currentPath === '/agro-dashboard' || ['agro_production', 'agro_production_farming', 'agro', 'farm', 'farming'].includes(businessCategory);
+  const AGRO_CATEGORIES = ['agro_production', 'agro_production_farming', 'agro', 'farm', 'farming'];
+  const businessCategory = (
+    localStorage.getItem('business_category') ||
+    localStorage.getItem('business_type') ||
+    localStorage.getItem('businessCategory') ||
+    localStorage.getItem('businessType') ||
+    ''
+  ).toLowerCase();
+  const isAgroProduction = currentPath === '/agro-dashboard' || AGRO_CATEGORIES.includes(businessCategory);
 
   // Request browser notification permission on mount
   useEffect(() => {

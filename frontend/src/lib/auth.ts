@@ -80,10 +80,25 @@ export const clearAuthData = (): void => {
 /**
  * Get the appropriate dashboard route based on user role
  */
+const AGRO_BUSINESS_CATEGORIES = ['agro_production', 'agro_production_farming', 'agro', 'agriculture', 'farm', 'farming'];
+
+const getStoredBusinessCategory = (): string => {
+  if (typeof window === 'undefined') return '';
+  return (
+    localStorage.getItem('business_category') ||
+    localStorage.getItem('business_type') ||
+    localStorage.getItem('businessCategory') ||
+    localStorage.getItem('businessType') ||
+    ''
+  ).toLowerCase();
+};
+
 export const getDashboardRoute = (role: string): string => {
   const roleLower = role.toLowerCase();
-  
-  if (roleLower.includes('agro') || roleLower.includes('farm')) {
+  const businessCategory = getStoredBusinessCategory();
+  const isAgroCategory = AGRO_BUSINESS_CATEGORIES.includes(businessCategory);
+
+  if (roleLower.includes('agro') || roleLower.includes('farm') || isAgroCategory) {
     return '/agro-dashboard';
   }
   if (roleLower.includes('admin')) {
@@ -95,7 +110,7 @@ export const getDashboardRoute = (role: string): string => {
   if (roleLower.includes('customer')) {
     return '/customer-dashboard';
   }
-  
+
   // Default to customer dashboard
   return '/customer-dashboard';
 };
