@@ -38,6 +38,7 @@ type Tx = {
 /* ─── component ─── */
 export default function AgroProductionDashboard() {
   const navigate = useNavigate();
+  const businessName = localStorage.getItem("business_name") || "My Farm";
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({
@@ -143,6 +144,11 @@ export default function AgroProductionDashboard() {
 
   return (
     <div className="max-w-lg lg:max-w-6xl mx-auto pb-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{businessName}</h1>
+        <p className="text-muted-foreground mt-1">Manage your agro operations</p>
+      </div>
+
       {/* ═══ Desktop: two-column grid ═══ */}
       <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 space-y-5 lg:space-y-0">
 

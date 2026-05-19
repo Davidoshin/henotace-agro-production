@@ -2490,7 +2490,10 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
 
   const getPlanIcon = (plan: string) => {
     switch (plan) {
+      case 'starter': return <Zap className="w-6 h-6" />;
+      case 'grow': return <Sparkles className="w-6 h-6" />;
       case 'basic': return <Zap className="w-6 h-6" />;
+      case 'pro':
       case 'professional': return <Star className="w-6 h-6" />;
       case 'enterprise': return <Crown className="w-6 h-6" />;
       default: return <ArrowUpCircle className="w-6 h-6" />;
@@ -2499,7 +2502,10 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
 
   const getPlanColor = (plan: string) => {
     switch (plan) {
+      case 'starter': return 'border-sky-500 bg-sky-50 dark:bg-sky-950';
+      case 'grow': return 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950';
       case 'basic': return 'border-blue-500 bg-blue-50 dark:bg-blue-950';
+      case 'pro':
       case 'professional': return 'border-purple-500 bg-purple-50 dark:bg-purple-950';
       case 'enterprise': return 'border-amber-500 bg-amber-50 dark:bg-amber-950';
       default: return 'border-gray-300';
@@ -2559,7 +2565,7 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
       </div>
 
       {/* Current Status */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -2590,6 +2596,27 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                 <p className="text-xl font-bold text-green-600 dark:text-green-400">
                   ₦{(subscriptionData?.wallet_balance || 0).toLocaleString()}
                 </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-slate-100 dark:bg-slate-950/30 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current Usage</p>
+                <div className="space-y-1 mt-2 text-sm">
+                  {Object.entries(subscriptionData.current_usage || {}).map(([key, count]) => (
+                    <div key={key} className="flex justify-between gap-4">
+                      <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                      <span className="font-medium">{typeof count === 'number' ? count.toLocaleString() : count}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -2810,7 +2837,7 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
               </div>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-4">
                 {plan.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -2818,6 +2845,16 @@ function UpgradePlanSection({ user, businessType = 'product' }: { user: any; bus
                   </li>
                 ))}
               </ul>
+              {plan.limits && (
+                <div className="border-t border-muted/50 pt-4 mb-4 text-sm">
+                  {Object.entries(plan.limits).map(([resource, value]) => (
+                    <div key={resource} className="flex justify-between py-1">
+                      <span className="text-muted-foreground capitalize">{resource.replace(/_/g, ' ')}</span>
+                      <span className="font-medium">{value === -1 ? 'Unlimited' : value.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <Button 
                 className="w-full" 
                 variant={isDisabled ? "outline" : "default"}

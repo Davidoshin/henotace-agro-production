@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiGet, apiGetCached, apiPostOptimistic, apiPutOptimistic, apiDeleteOptimistic } from "@/lib/api";
+import { EMAIL_VERIFICATION_ROUTE } from "@/components/account/EmailVerificationGate";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -114,6 +115,25 @@ export const formatNumberInput = (raw: string): string => {
 
 /** Strip commas from formatted number for API submission */
 export const stripCommas = (v: string) => v.replace(/,/g, "");
+
+const renderEmailVerificationErrorDescription = (error: any) => {
+  const message = error?.message || error?.data?.error || `Could not save.`;
+  if (typeof message === "string" && /verify.*email|email.*verify|email verification/i.test(message)) {
+    return (
+      <div className="space-y-2">
+        <p>Verify your email to continue.</p>
+        <a
+          href={EMAIL_VERIFICATION_ROUTE}
+          className="inline-block underline font-medium text-white hover:text-slate-100"
+        >
+          Verify now
+        </a>
+      </div>
+    );
+  }
+
+  return message;
+};
 
 /* ═══════════ Async-Select sub-component ═══════════ */
 
@@ -445,7 +465,7 @@ export default function AgroCrudPage({
     } catch (error: any) {
       toast({
         title: "Save failed",
-        description: error?.message || `Could not save.`,
+        description: renderEmailVerificationErrorDescription(error),
         variant: "destructive",
       });
       // Revert optimistic update on error
@@ -471,7 +491,7 @@ export default function AgroCrudPage({
     } catch (error: any) {
       toast({
         title: "Delete failed",
-        description: error?.message || "Could not delete.",
+        description: renderEmailVerificationErrorDescription(error),
         variant: "destructive",
       });
     } finally {

@@ -1,16 +1,16 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { apiGet } from "@/lib/api";
 
-export const EMAIL_VERIFICATION_ROUTE = "/business/notifications?tab=verification";
+export const EMAIL_VERIFICATION_ROUTE = "/manage-account?view=verification";
 
 type EmailVerificationGateProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  reason?: string;
+  reason?: ReactNode;
 };
 
 export async function checkEmailVerification(): Promise<boolean> {
@@ -41,9 +41,8 @@ export async function checkEmailVerification(): Promise<boolean> {
 
 export function EmailVerificationGate({ open, onOpenChange, reason }: EmailVerificationGateProps) {
   const navigate = useNavigate();
-  const description = useMemo(() => {
-    if (reason) return reason;
-    return "Please verify your email to continue.";
+  const description = useMemo<ReactNode>(() => {
+    return reason ?? "Verify your email to continue.";
   }, [reason]);
 
   useEffect(() => {

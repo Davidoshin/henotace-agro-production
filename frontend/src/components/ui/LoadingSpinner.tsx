@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -183,33 +183,37 @@ export function CardGridSkeleton({ count = 4 }: { count?: number }) {
 }
 
 // Button spinner for inline loading states (replaces Loader2 in buttons)
-export function ButtonSpinner({ className = "" }: { className?: string }) {
-  return (
-    <svg 
-      className={`w-4 h-4 animate-spin ${className}`}
-      viewBox="0 0 16 16" 
-      fill="none"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeOpacity="0.2"
-      />
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeDasharray="25 38"
-      />
-    </svg>
-  );
-}
+export const ButtonSpinner = React.forwardRef<
+  SVGSVGElement,
+  React.SVGProps<SVGSVGElement>
+>(({ className = "", ...props }, ref) => (
+  <svg 
+    ref={ref}
+    className={`w-4 h-4 animate-spin ${className}`}
+    viewBox="0 0 16 16" 
+    fill="none"
+    {...props}
+  >
+    <circle
+      cx="8"
+      cy="8"
+      r="6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeOpacity="0.2"
+    />
+    <circle
+      cx="8"
+      cy="8"
+      r="6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeDasharray="25 38"
+    />
+  </svg>
+));
+ButtonSpinner.displayName = "ButtonSpinner";
 
 // Page loading spinner (for replacing full-page Loader2)
 export function PageSpinner({ message = "Loading..." }: { message?: string }) {
