@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Building2, ArrowLeft, Sprout } from 'lucide-react';
 import { ButtonSpinner } from '@/components/ui/LoadingSpinner';
 import { apiCallPublic, getBaseUrl } from '@/lib/api';
-
+import { persistLoginSession } from '@/lib/auth';
 
 const BusinessSignup = () => {
   const navigate = useNavigate();
@@ -124,49 +124,7 @@ const BusinessSignup = () => {
           throw new Error(loginData.error || loginData.detail || 'Auto-login failed');
         }
 
-        // Store tokens and user data (same logic as BusinessLogin)
-        const accessToken = loginData.tokens?.access || loginData.access;
-        const refreshToken = loginData.tokens?.refresh || loginData.refresh;
-        
-        if (accessToken) {
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken || '');
-          localStorage.setItem('access_token', accessToken);
-          localStorage.setItem('refresh_token', refreshToken || '');
-        }
-        
-        const role = loginData.user?.role || loginData.login_as || loginData.role || 'business_owner';
-        localStorage.setItem('userRole', role);
-        localStorage.setItem('user_role', role);
-        
-        const userData = {
-          id: loginData.user?.id || loginData.user_id,
-          email: loginData.user?.email || signupData.email,
-          first_name: loginData.user?.first_name || signupData.first_name,
-          last_name: loginData.user?.last_name || signupData.last_name,
-          role: role,
-          profile_image: loginData.user?.profile_image || ''
-        };
-        
-        localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.setItem('user_id', userData.id?.toString() || '');
-        localStorage.setItem('user_email', userData.email);
-        localStorage.setItem('user_first_name', userData.first_name);
-        localStorage.setItem('user_last_name', userData.last_name);
-        
-        // Store business data if available
-        if (loginData.business) {
-          localStorage.setItem('business_id', loginData.business.id?.toString() || '');
-          localStorage.setItem('business_name', loginData.business.name || '');
-          localStorage.setItem('business_unique_code', loginData.business.code || loginData.business.unique_code || '');
-          localStorage.setItem('business_slug', loginData.business.slug || loginData.business.code?.toLowerCase() || '');
-        }
-        
-        const agroAccount = isAgro || isAgroBusiness(loginData.business, loginData.realm);
-        if (agroAccount) {
-          localStorage.setItem('business_category', loginData.business?.business_category || loginData.business?.category || 'agro_production');
-          localStorage.setItem('business_type', loginData.business?.business_type || loginData.business?.type || 'agro_production');
-        }
+        persistLoginSession(loginData, signupData.email, signupData.password, isAgro ? 'agro' : 'business');
 
         toast({
           title: 'Account Created',

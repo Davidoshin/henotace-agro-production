@@ -15,7 +15,7 @@ import { PageSpinner, ButtonSpinner, SectionSpinner, SavingOverlay } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { EmailVerificationGate, checkEmailVerification } from "@/components/account/EmailVerificationGate";
+import { EmailVerificationGate, EMAIL_VERIFICATION_ROUTE, checkEmailVerification } from "@/components/account/EmailVerificationGate";
 
 interface ProductVariant {
   id?: number;
@@ -1065,20 +1065,48 @@ export default function ProductManagement() {
       setShowAddDialog(false);
       await load();
     } catch (e: any) {
-      // Check if upgrade is required (plan limit reached)
-      if (e.data?.upgrade_required || e.upgrade_required) {
+      // Check for email verification requirement
+      if (e.data?.requires_email_verification || e.requires_email_verification) {
+        setShowEmailVerificationGate(true);
         toast({ 
-          title: "Plan Limit Reached", 
+          title: "Email Verification Required", 
           description: (
-            <div>
-              {e.message || e.data?.error || "You've reached your plan limit."}{" "}
-              <a href="/manage-account?tab=subscription" className="underline font-medium text-primary hover:text-primary/80">
-                Upgrade now
+            <div className="space-y-2">
+              <p>{e.message || e.data?.error || "Please verify your email to create products."}</p>
+              <a 
+                href={EMAIL_VERIFICATION_ROUTE} 
+                className="inline-block underline font-medium text-primary hover:text-primary/80"
+              >
+                Verify email now →
               </a>
             </div>
           ),
           variant: "destructive",
-          duration: 10000
+          duration: 12000
+        });
+      }
+      // Check if upgrade is required (plan limit reached)
+      else if (e.data?.upgrade_required || e.upgrade_required) {
+        const currentPlan = e.data?.current_plan || e.current_plan || 'free';
+        const limit = e.data?.limit || e.limit;
+        const current = e.data?.current || e.current;
+        
+        toast({ 
+          title: "Product Limit Reached", 
+          description: (
+            <div className="space-y-2">
+              <p>{e.message || e.data?.error || `You've reached your plan limit.`}</p>
+              {limit && current && <p className="text-xs opacity-90">Current: {current}/{limit} products</p>}
+              <a 
+                href="/manage-account?tab=upgrade" 
+                className="inline-block underline font-medium text-primary hover:text-primary/80"
+              >
+                Upgrade your plan →
+              </a>
+            </div>
+          ),
+          variant: "destructive",
+          duration: 12000
         });
       } else {
         toast({ title: "Error", description: e.message || "Failed to save product", variant: "destructive" });

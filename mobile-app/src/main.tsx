@@ -3,6 +3,21 @@ import App from "./App.tsx";
 import "./index.css";
 import { initErrorReporting } from "./services/errorReporting";
 
+// Suppress known Radix UI React.forwardRef warning in development
+// This is a known issue with Radix UI and doesn't affect functionality
+if (process.env.NODE_ENV === 'development') {
+  const originalError = console.error;
+  console.error = function(...args: any[]) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Function components cannot be given refs')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+}
+
 // Initialize error reporting for proactive customer support
 initErrorReporting();
 

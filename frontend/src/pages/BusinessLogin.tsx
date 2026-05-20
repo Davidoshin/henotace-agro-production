@@ -11,6 +11,7 @@ import { Building2, ArrowLeft, Fingerprint, ShieldCheck, KeyRound, Mail, Eye, Ey
 import { ButtonSpinner } from '@/components/ui/LoadingSpinner';
 import { getBaseUrl } from '@/lib/api';
 import { reportLoginFailure } from '@/services/errorReporting';
+import { persistLoginSession, getCachedLoginCredentials } from '@/lib/auth';
 
 const BusinessLogin = () => {
   const AUTH_REQUEST_TIMEOUT_MS = 12000;
@@ -81,28 +82,13 @@ const BusinessLogin = () => {
   // Load cached credentials from localStorage
   const loadCachedCredentials = () => {
     try {
-      const cachedEmail = localStorage.getItem('cached_login_email');
-      const cachedPassword = localStorage.getItem('cached_login_password');
-      if (cachedEmail) {
-        setEmail(cachedEmail);
-      }
-      if (cachedPassword) {
-        // Decode the base64 encoded password
-        setPassword(atob(cachedPassword));
+      const cached = getCachedLoginCredentials();
+      if (cached) {
+        setEmail(cached.email);
+        setPassword(cached.password);
       }
     } catch (err) {
       console.log('Failed to load cached credentials:', err);
-    }
-  };
-
-  // Save credentials to localStorage for future logins
-  const saveCachedCredentials = (emailToSave: string, passwordToSave: string) => {
-    try {
-      localStorage.setItem('cached_login_email', emailToSave);
-      // Encode password in base64 for basic obfuscation (not security)
-      localStorage.setItem('cached_login_password', btoa(passwordToSave));
-    } catch (err) {
-      console.log('Failed to cache credentials:', err);
     }
   };
 
@@ -232,59 +218,11 @@ const BusinessLogin = () => {
   };
 
   const handleSuccessfulLogin = (data: any) => {
-    // NOTE: Primary tokens are now stored in HttpOnly cookies by the server
-    // The server sets henotace_access_token and henotace_refresh_token cookies
-    // which JavaScript cannot access (this is intentional for security)
-    
-    // For backwards compatibility with mobile apps and existing code,
-    // we also store tokens in localStorage if they're in the response
-    const accessToken = data.tokens?.access || data.access;
-    const refreshToken = data.tokens?.refresh || data.refresh;
-    
-    if (accessToken) {
-      // Store in localStorage for backwards compatibility
-      // Primary auth will use HttpOnly cookies set by server
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken || '');
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken || '');
-    }
-    
+    persistLoginSession(data, email, password, loginRealm);
+
     const role = data.user?.role || data.login_as || data.role || 'business_owner';
-    localStorage.setItem('userRole', role);
-    localStorage.setItem('user_role', role);
-    
-    // Build user data object
-    const userData = {
-      id: data.user?.id || data.user_id,
-      email: data.user?.email || email,
-      first_name: data.user?.first_name || '',
-      last_name: data.user?.last_name || '',
-      role: role,
-      profile_image: data.user?.profile_image || ''
-    };
-    
-    localStorage.setItem('userData', JSON.stringify(userData));
-    localStorage.setItem('user_id', userData.id?.toString() || '');
-    localStorage.setItem('user_email', userData.email);
-    localStorage.setItem('user_first_name', userData.first_name);
-    localStorage.setItem('user_last_name', userData.last_name);
-    
-    // Store business data if available
-    if (data.business) {
-      localStorage.setItem('business_id', data.business.id?.toString() || '');
-      localStorage.setItem('business_name', data.business.name || '');
-      localStorage.setItem('business_unique_code', data.business.code || data.business.unique_code || '');
-      localStorage.setItem('business_slug', data.business.slug || data.business.code?.toLowerCase() || '');
-    }
     const agroAccount = isAgroRoute || isAgroBusiness(data.business, data.realm);
-        if (agroAccount) {
-          localStorage.setItem('business_category', data.business?.business_category || data.business?.category || 'agro_production');
-          localStorage.setItem('business_type', data.business?.business_type || data.business?.type || 'agro_production');
-        }
-    saveCachedCredentials(userData.email, password);
-    
-    // Navigate based on role
+
     if (agroAccount) {
       navigate('/agro-dashboard');
     } else if (role === 'business_staff' || role === 'staff') {
