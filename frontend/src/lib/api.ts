@@ -23,6 +23,7 @@ import {
   removeQueuedRequest,
   getIsOnline,
   dispatchOfflineSyncStatus,
+  subscribeOfflineQueueChanges,
   initOfflineStatusListeners,
 } from './offline';
 
@@ -229,6 +230,12 @@ export interface ApiError {
  * @param retryCount - Internal retry counter (max 1 retry on 401)
  * @returns Promise with response data
  */
+export type { OfflineQueueRequest } from './offline';
+export { getQueuedRequests as getQueuedOfflineRequests, subscribeOfflineQueueChanges } from './offline';
+export const syncOfflineQueue = async (): Promise<void> => {
+  await processOfflineQueue();
+};
+
 export const apiCall = async <T = any>(
   endpoint: string,
   options: RequestInit & { includeAuth?: boolean; timeout?: number } = {},
@@ -410,7 +417,7 @@ export const apiDelete = <T = any>(endpoint: string, options?: RequestInit): Pro
 export const apiGetCached = async <T = any>(
   endpoint: string,
   options?: RequestInit,
-  cacheTTL: number = 1000 * 60 * 60 * 24
+  cacheTTL: number = 14 * 24 * 60 * 60 * 1000
 ): Promise<T> => {
   const cached = getCachedData<T>(endpoint);
   if (cached !== null) {

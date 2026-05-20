@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiGet } from "@/lib/api";
+import { apiGetCached } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +83,8 @@ const PERIOD_OPTIONS: { label: string; value: PeriodKey }[] = [
   { label: "Custom Range", value: "custom" },
 ];
 
+const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   monthly: "This Month",
   quarterly: "This Quarter",
@@ -111,7 +113,7 @@ export default function AgroAccountPage() {
       if (activeFarmId && activeFarmId !== "all") {
         url += `${url.includes("?") ? "&" : "?"}farm_id=${activeFarmId}`;
       }
-      const res = await apiGet(url);
+      const res = await apiGetCached(url, {}, CACHE_TTL_MS);
       setData(res?.account || null);
     } catch {
       /* empty */
@@ -127,7 +129,7 @@ export default function AgroAccountPage() {
   useEffect(() => {
     const loadFarms = async () => {
       try {
-        const res = await apiGet("agro/farms/");
+        const res = await apiGetCached("agro/farms/", {}, CACHE_TTL_MS);
         setFarms(res?.farms || []);
       } catch {
         setFarms([]);

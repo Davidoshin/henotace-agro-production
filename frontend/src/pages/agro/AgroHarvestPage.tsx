@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiDeleteOptimistic, apiGet, apiPostOptimistic, apiPutOptimistic } from "@/lib/api";
+import { apiDeleteOptimistic, apiGetCached, apiPostOptimistic, apiPutOptimistic } from "@/lib/api";
 import {
   CalendarDays,
   ChevronLeft,
@@ -121,6 +121,8 @@ const statusClassName = (status: string) => {
   }
 };
 
+const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
 export default function AgroHarvestPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -136,8 +138,8 @@ export default function AgroHarvestPage() {
     setLoading(true);
     try {
       const [scheduleRes, farmRes] = await Promise.all([
-        apiGet(`agro/harvest-schedules/?year=${selectedYear}`),
-        apiGet("agro/farms/"),
+        apiGetCached(`agro/harvest-schedules/?year=${selectedYear}`, {}, CACHE_TTL_MS),
+        apiGetCached("agro/farms/", {}, CACHE_TTL_MS),
       ]);
       setSchedules(scheduleRes?.harvest_schedules || []);
       setFarms((farmRes?.farms || []).map((farm: any) => ({ id: farm.id, name: farm.name })));

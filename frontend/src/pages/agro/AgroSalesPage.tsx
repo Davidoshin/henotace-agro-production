@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import AgroCrudPage from "@/components/agro/AgroCrudPage";
 import AgroReceiptModal, { ReceiptButton } from "@/components/agro/AgroReceiptModal";
 import AgroReportHeader from "@/components/agro/AgroReportHeader";
+import { Button } from "@/components/ui/button";
 
 const fmtMoney = (v: any) => {
   const n = Number(v);
@@ -32,7 +33,7 @@ export default function AgroSalesPage() {
     ]), []);
 
   return (
-    <>
+    <div className="space-y-6">
       <AgroCrudPage
         title="Agri Sales"
         description="Record produce sales, track buyer payments, and let stock reduce automatically."
@@ -58,7 +59,6 @@ export default function AgroSalesPage() {
             setShowSuccess(true);
             setReceiptOpen(true);
           }
-          // Refresh report stats after successful save
           if (refreshReport) {
             refreshReport();
           }
@@ -70,133 +70,131 @@ export default function AgroSalesPage() {
             setReceiptOpen(true);
           }} />
         )}
-      preparePayload={(payload) => {
-        // Remove display-only total_price
-        delete payload.total_price;
-        // Auto-compute amount_paid based on payment method
-        const qty = Number((payload.quantity || "0").replace(/,/g, ""));
-        const price = Number((payload.unit_price || "0").replace(/,/g, ""));
-        const total = qty * price;
-        if (payload.payment_method === "credit") {
-          payload.amount_paid = "0";
-          // Link credit_customer as customer_id
-          if (payload.credit_customer) {
-            payload.customer_id = payload.credit_customer;
+        preparePayload={(payload) => {
+          delete payload.total_price;
+          const qty = Number((payload.quantity || "0").replace(/,/g, ""));
+          const price = Number((payload.unit_price || "0").replace(/,/g, ""));
+          const total = qty * price;
+          if (payload.payment_method === "credit") {
+            payload.amount_paid = "0";
+            if (payload.credit_customer) {
+              payload.customer_id = payload.credit_customer;
+            }
+          } else {
+            payload.amount_paid = String(total);
           }
-        } else {
-          payload.amount_paid = String(total);
-        }
-        delete payload.credit_customer;
-        return payload;
-      }}
-      fields={[
-        { name: "buyer_name", label: "Buyer Name", placeholder: "e.g. Fresh Foods Hub", required: true },
-        { name: "buyer_phone", label: "Buyer Phone", placeholder: "+234..." },
-        {
-          name: "produce_id",
-          label: "Produce",
-          type: "async-select",
-          asyncEndpoint: "agro/produce/",
-          asyncResponseKey: "produce",
-          asyncLabelKey: "name",
-          asyncValueKey: "id",
-          autoPopulate: { unit: "measurement_unit", unit_price: "unit_price" },
-          required: true,
-        },
-        {
-          name: "farm_id",
-          label: "Farm",
-          type: "async-select",
-          asyncEndpoint: "agro/farms/",
-          asyncResponseKey: "farms",
-          asyncLabelKey: "name",
-          asyncValueKey: "id",
-          required: true,
-        },
-        { name: "quantity", label: "Quantity Sold", type: "number", placeholder: "30", required: true },
-        { name: "unit", label: "Unit", type: "select", options: [
-          { label: "Kilograms (kg)", value: "kg" },
-          { label: "Ton", value: "ton" },
-          { label: "100kg Bag", value: "bag_100kg" },
-          { label: "50kg Bag", value: "bag_50kg" },
-          { label: "20kg Bag", value: "bag_20kg" },
-          { label: "Basket", value: "basket" },
-          { label: "Bundle", value: "bundle" },
-          { label: "Pick-up Load", value: "pickup_load" },
-          { label: "Lorry Load", value: "lorry_load" },
-          { label: "Trailer Load", value: "trailer_load" },
-          { label: "Unit", value: "unit" },
-        ]},
-        { name: "unit_price", label: "Unit Price (₦)", type: "number", placeholder: "45,000", required: true },
-        {
-          name: "total_price",
-          label: "Total Price (₦)",
-          type: "number",
-          readOnly: true,
-          excludeFromPayload: true,
-          computed: (data: Record<string, string>) => {
-            const qty = Number((data.quantity || "0").replace(/,/g, ""));
-            const price = Number((data.unit_price || "0").replace(/,/g, ""));
-            const total = qty * price;
-            if (!total) return "";
-            const parts = total.toFixed(2).split(".");
-            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            return `${intPart}.${parts[1]}`;
+          delete payload.credit_customer;
+          return payload;
+        }}
+        fields={[
+          { name: "buyer_name", label: "Buyer Name", placeholder: "e.g. Fresh Foods Hub", required: true },
+          { name: "buyer_phone", label: "Buyer Phone", placeholder: "+234..." },
+          {
+            name: "produce_id",
+            label: "Produce",
+            type: "async-select",
+            asyncEndpoint: "agro/produce/",
+            asyncResponseKey: "produce",
+            asyncLabelKey: "name",
+            asyncValueKey: "id",
+            autoPopulate: { unit: "measurement_unit", unit_price: "unit_price" },
+            required: true,
           },
-        },
-        { name: "payment_method", label: "Payment Method", type: "select", options: [
-          { label: "Cash", value: "cash" },
-          { label: "Bank Transfer", value: "bank_transfer" },
-          { label: "Mobile Money", value: "mobile" },
-          { label: "Credit / On Account", value: "credit" },
-          { label: "POS", value: "pos" },
-        ]},
-        {
-          name: "credit_customer",
-          label: "Credit Customer",
-          type: "async-select",
-          asyncEndpoint: "agro/buyers/",
-          asyncResponseKey: "buyers",
-          asyncLabelKey: "name",
-          asyncValueKey: "id",
-          visibleWhen: { field: "payment_method", values: ["credit"] },
-          autoPopulate: { buyer_name: "name", buyer_phone: "phone" },
-          excludeFromPayload: true,
-        },
-        { name: "transport_mode", label: "Transport Mode", type: "select", options: [
-          { label: "Buyer Pickup", value: "buyer_pickup" },
-          { label: "Truck Delivery", value: "truck" },
-          { label: "Van / Pickup", value: "van" },
-          { label: "Motorcycle", value: "motorcycle" },
-          { label: "Other", value: "other" },
-        ]},
-        { name: "sale_date", label: "Sale Date", type: "date" },
-        { name: "notes", label: "Notes", type: "textarea", placeholder: "Delivery terms, payment balance, destination..." },
-      ]}
-      displayFields={[
-        { key: "produce_name", label: "Produce" },
-        { key: "farm_name", label: "Farm" },
-        { key: "quantity", label: "Qty" },
-        { key: "unit", label: "Unit" },
-        { key: "total_amount", label: "Total", format: fmtMoney },
-        { key: "amount_paid", label: "Paid", format: fmtMoney },
-        { key: "payment_method", label: "Method", format: (v: any) => {
-          const map: Record<string, string> = { cash: "Cash", bank_transfer: "Transfer", mobile: "Mobile", credit: "Credit", pos: "POS" };
-          return map[v] || String(v || "—");
-        }},
-        { key: "payment_status", label: "Status", format: (v: any) => {
-          const map: Record<string, string> = { paid: "✅ Paid", partial: "⏳ Partial", pending: "⏳ Pending", credit: "🔴 Credit" };
-          return map[v] || String(v || "—");
-        }},
-        { key: "customer_name", label: "Customer" },
-      ]}
-    />
-    <AgroReceiptModal
-      saleId={receiptSaleId}
-      open={receiptOpen}
-      onClose={() => { setReceiptOpen(false); setReceiptSaleId(null); }}
-      showSuccess={showSuccess}
-    />
-    </>
+          {
+            name: "farm_id",
+            label: "Farm",
+            type: "async-select",
+            asyncEndpoint: "agro/farms/",
+            asyncResponseKey: "farms",
+            asyncLabelKey: "name",
+            asyncValueKey: "id",
+            required: true,
+          },
+          { name: "quantity", label: "Quantity Sold", type: "number", placeholder: "30", required: true },
+          { name: "unit", label: "Unit", type: "select", options: [
+            { label: "Kilograms (kg)", value: "kg" },
+            { label: "Ton", value: "ton" },
+            { label: "100kg Bag", value: "bag_100kg" },
+            { label: "50kg Bag", value: "bag_50kg" },
+            { label: "20kg Bag", value: "bag_20kg" },
+            { label: "Basket", value: "basket" },
+            { label: "Bundle", value: "bundle" },
+            { label: "Pick-up Load", value: "pickup_load" },
+            { label: "Lorry Load", value: "lorry_load" },
+            { label: "Trailer Load", value: "trailer_load" },
+            { label: "Unit", value: "unit" },
+          ]},
+          { name: "unit_price", label: "Unit Price (₦)", type: "number", placeholder: "45,000", required: true },
+          {
+            name: "total_price",
+            label: "Total Price (₦)",
+            type: "number",
+            readOnly: true,
+            excludeFromPayload: true,
+            computed: (data: Record<string, string>) => {
+              const qty = Number((data.quantity || "0").replace(/,/g, ""));
+              const price = Number((data.unit_price || "0").replace(/,/g, ""));
+              const total = qty * price;
+              if (!total) return "";
+              const parts = total.toFixed(2).split(".");
+              const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+              return `${intPart}.${parts[1]}`;
+            },
+          },
+          { name: "payment_method", label: "Payment Method", type: "select", options: [
+            { label: "Cash", value: "cash" },
+            { label: "Bank Transfer", value: "bank_transfer" },
+            { label: "Mobile Money", value: "mobile" },
+            { label: "Credit / On Account", value: "credit" },
+            { label: "POS", value: "pos" },
+          ]},
+          {
+            name: "credit_customer",
+            label: "Credit Customer",
+            type: "async-select",
+            asyncEndpoint: "agro/buyers/",
+            asyncResponseKey: "buyers",
+            asyncLabelKey: "name",
+            asyncValueKey: "id",
+            visibleWhen: { field: "payment_method", values: ["credit"] },
+            autoPopulate: { buyer_name: "name", buyer_phone: "phone" },
+            excludeFromPayload: true,
+          },
+          { name: "transport_mode", label: "Transport Mode", type: "select", options: [
+            { label: "Buyer Pickup", value: "buyer_pickup" },
+            { label: "Truck Delivery", value: "truck" },
+            { label: "Van / Pickup", value: "van" },
+            { label: "Motorcycle", value: "motorcycle" },
+            { label: "Other", value: "other" },
+          ]},
+          { name: "sale_date", label: "Sale Date", type: "date" },
+          { name: "notes", label: "Notes", type: "textarea", placeholder: "Delivery terms, payment balance, destination..." },
+        ]}
+        displayFields={[
+          { key: "produce_name", label: "Produce" },
+          { key: "farm_name", label: "Farm" },
+          { key: "quantity", label: "Qty" },
+          { key: "unit", label: "Unit" },
+          { key: "total_amount", label: "Total", format: fmtMoney },
+          { key: "amount_paid", label: "Paid", format: fmtMoney },
+          { key: "payment_method", label: "Method", format: (v: any) => {
+            const map: Record<string, string> = { cash: "Cash", bank_transfer: "Transfer", mobile: "Mobile", credit: "Credit", pos: "POS" };
+            return map[v] || String(v || "—");
+          }},
+          { key: "payment_status", label: "Status", format: (v: any) => {
+            const map: Record<string, string> = { paid: "✅ Paid", partial: "⏳ Partial", pending: "⏳ Pending", credit: "🔴 Credit" };
+            return map[v] || String(v || "—");
+          }},
+          { key: "customer_name", label: "Customer" },
+        ]}
+      />
+
+      <AgroReceiptModal
+        saleId={receiptSaleId}
+        open={receiptOpen}
+        onClose={() => { setReceiptOpen(false); setReceiptSaleId(null); }}
+        showSuccess={showSuccess}
+      />
+    </div>
   );
 }

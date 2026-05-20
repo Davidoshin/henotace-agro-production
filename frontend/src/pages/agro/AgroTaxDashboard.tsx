@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { apiGet } from "@/lib/api";
+import { apiGetCached } from "@/lib/api";
 import {
   Calculator,
   Download,
@@ -49,6 +49,8 @@ interface TaxData {
   monthly_expenses: { month: string | null; total: number }[];
 }
 
+const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
 export default function AgroTaxDashboard() {
   const [loading, setLoading] = useState(true);
   const [tax, setTax] = useState<TaxData | null>(null);
@@ -57,7 +59,7 @@ export default function AgroTaxDashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await apiGet("agro/tax/dashboard/");
+        const res = await apiGetCached("agro/tax/dashboard/", {}, CACHE_TTL_MS);
         setTax(res?.tax || null);
       } catch {
         setTax(null);

@@ -14,6 +14,7 @@ export interface OfflineQueueRequest {
 const CACHE_PREFIX = 'henotace_agro_cache:';
 const QUEUE_KEY = 'henotace_agro_offline_queue';
 const SYNC_STATUS_EVENT = 'henotace-offline-sync';
+const QUEUE_CHANGED_EVENT = 'henotace-offline-queue-changed';
 
 const serialize = (value: any) => JSON.stringify(value);
 const deserialize = <T>(value: string | null): T | null => {
@@ -67,16 +68,19 @@ export const queueRequest = (request: OfflineQueueRequest): void => {
   const current = getQueuedRequests();
   saveQueuedRequests([...current.filter((item) => item.id !== request.id), request]);
   dispatchOfflineSyncStatus('queued');
+  dispatchOfflineQueueChanged();
 };
 
 export const removeQueuedRequest = (id: string): void => {
   const queue = getQueuedRequests().filter((item) => item.id !== id);
   saveQueuedRequests(queue);
+  dispatchOfflineQueueChanged();
 };
 
 export const clearQueuedRequests = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(QUEUE_KEY);
+  dispatchOfflineQueueChanged();
 };
 
 export const getIsOnline = (): boolean => {
@@ -104,6 +108,28 @@ export const subscribeOfflineSyncStatus = (
   return () => {
     window.removeEventListener(SYNC_STATUS_EVENT, handler as EventListener);
   };
+};
+
+export const subscribeOfflineQueueChanges = (
+  listener: (event: CustomEvent<{ timestamp: number }>) => void
+): (() => void) => {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  const handler = (event: Event) => {
+    listener(event as CustomEvent<{ timestamp: number }>);
+  };
+  window.addEventListener(QUEUE_CHANGED_EVENT, handler as EventListener);
+
+  return () => {
+    window.removeEventListener(QUEUE_CHANGED_EVENT, handler as EventListener);
+  };
+};
+
+export const dispatchOfflineQueueChanged = (): void => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(QUEUE_CHANGED_EVENT, { detail: { timestamp: Date.now() } }));
 };
 
 export const initOfflineStatusListeners = (): void => {

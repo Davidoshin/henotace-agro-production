@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -40,6 +40,8 @@ interface AgroReportHeaderProps {
   showDateFilter?: boolean;
   /** Callback to expose refresh function to parent */
   onRefreshReady?: (refresh: () => void) => void;
+  /** Optional actions to render beside print/export */
+  rightActions?: ReactNode;
 }
 
 export default function AgroReportHeader({
@@ -52,6 +54,7 @@ export default function AgroReportHeader({
   exportFilename,
   showDateFilter = true,
   onRefreshReady,
+  rightActions,
 }: AgroReportHeaderProps) {
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState(today());
@@ -145,7 +148,8 @@ export default function AgroReportHeader({
           <p className="text-sm text-muted-foreground">{subtitle}</p>
           <p className="mt-1 text-xs text-muted-foreground">{scopeLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {rightActions}
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={!report}>
             <Printer className="h-4 w-4 mr-1" /> Print
           </Button>

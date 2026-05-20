@@ -116,6 +116,8 @@ export const formatNumberInput = (raw: string): string => {
 /** Strip commas from formatted number for API submission */
 export const stripCommas = (v: string) => v.replace(/,/g, "");
 
+const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
 const renderEmailVerificationErrorDescription = (error: any) => {
   const message = error?.message || error?.data?.error || `Could not save.`;
   if (typeof message === "string" && /verify.*email|email.*verify|email verification/i.test(message)) {
@@ -161,7 +163,7 @@ function AsyncSelectField({
   useEffect(() => {
     if (!field.asyncEndpoint) return;
     setLoading(true);
-    apiGet(field.asyncEndpoint)
+    apiGetCached(field.asyncEndpoint, {}, CACHE_TTL_MS)
       .then((res: any) => {
         const items = res?.[field.asyncResponseKey || "items"] || [];
         setRawItems(items);
@@ -297,7 +299,7 @@ export default function AgroCrudPage({
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiGetCached(endpoint, {}, 1000 * 60 * 5);
+      const data = await apiGetCached(endpoint, {}, CACHE_TTL_MS);
       const loadedItems = Array.isArray(data?.[responseKey]) ? data[responseKey] : [];
       setItems(loadedItems);
       onItemsLoaded?.(loadedItems);
