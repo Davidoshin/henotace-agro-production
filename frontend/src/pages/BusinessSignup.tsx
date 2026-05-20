@@ -208,12 +208,12 @@ const BusinessSignup = () => {
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${isAgro ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-primary/10'}`}>
-                {isAgro ? (
-                  <Sprout className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                ) : (
-                  <Building2 className="h-6 w-6 text-primary" />
-                )}
+              <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${isAgro ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-primary/10'} overflow-hidden`}>
+                <img
+                  src="/faviconlightmode.png"
+                  alt="Henotace"
+                  className="h-6 w-6 object-contain"
+                />
               </div>
             </div>
             <CardTitle className="text-2xl">{isAgro ? 'Create Farm Account' : 'Create Business Account'}</CardTitle>

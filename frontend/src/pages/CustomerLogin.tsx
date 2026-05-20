@@ -321,8 +321,12 @@ const CustomerLogin = () => {
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <User className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/faviconlightmode.png"
+                  alt="Henotace"
+                  className="h-6 w-6 object-contain"
+                />
               </div>
             </div>
             <CardTitle className="text-2xl">Customer Login</CardTitle>

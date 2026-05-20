@@ -101,13 +101,17 @@ export default function AdminLogin() {
           <div className="flex justify-center">
             {!logoError ? (
               <img 
-                src="/light-mode-logo.jpg" 
+                src="/faviconlightmode.png" 
                 alt="Henotace Logo" 
                 className="h-12 w-12 rounded-lg"
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <Shield className="h-12 w-12 text-blue-600" />
+              <img
+                src="/faviconlightmode.png"
+                alt="Henotace Logo"
+                className="h-12 w-12 rounded-lg"
+              />
             )}
           </div>
           <div>

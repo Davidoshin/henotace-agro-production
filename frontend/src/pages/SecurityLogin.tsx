@@ -59,8 +59,12 @@ export default function SecurityLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Shield className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+            <img
+              src="/faviconlightmode.png"
+              alt="Henotace"
+              className="h-6 w-6 object-contain"
+            />
           </div>
           <CardTitle className="text-2xl font-bold">Security Team Login</CardTitle>
           <CardDescription>

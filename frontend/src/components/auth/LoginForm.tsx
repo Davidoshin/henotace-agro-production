@@ -625,7 +625,7 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
           <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm shadow-lg mx-auto mb-4 overflow-hidden relative">
             {!logoError ? (
               <img 
-                src={isDark ? "/darkmodelogo.jpg" : "/light-mode-logo.jpg"} 
+                src="/faviconlightmode.png" 
                 alt="Henotace Logo" 
                 className="w-full h-full object-contain p-1"
                 onError={() => setLogoError(true)}

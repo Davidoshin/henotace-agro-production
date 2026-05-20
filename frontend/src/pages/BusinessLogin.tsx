@@ -544,11 +544,11 @@ const BusinessLogin = () => {
           </div>
           <div className="flex items-center gap-3 pt-4">
             <div className={`p-2 rounded-lg ${isAgroRoute ? 'bg-emerald-100 dark:bg-emerald-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
-              {isAgroRoute ? (
-                <Sprout className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              )}
+              <img
+                src="/faviconlightmode.png"
+                alt="Henotace"
+                className="h-6 w-6 object-contain"
+              />
             </div>
             <div>
               <CardTitle className="text-2xl">{isAgroRoute ? 'Farm Login' : 'Business Login'}</CardTitle>

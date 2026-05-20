@@ -97,13 +97,17 @@ export default function BRMLogin() {
           <div className="flex justify-center">
             {!logoError ? (
               <img 
-                src="/light-mode-logo.jpg" 
+                src="/faviconlightmode.png" 
                 alt="Henotace Logo" 
                 className="h-12 w-12 rounded-lg"
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <UserCog className="h-12 w-12 text-purple-600" />
+              <img
+                src="/faviconlightmode.png"
+                alt="Henotace Logo"
+                className="h-12 w-12 rounded-lg"
+              />
             )}
           </div>
           <div>
